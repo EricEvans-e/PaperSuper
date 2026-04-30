@@ -50,12 +50,14 @@ npm run preview
 16. Hold `Ctrl/Cmd` and scroll the mouse wheel inside the PDF pane; confirm only the PDF view zooms, the header percentage updates, and existing highlights stay aligned with the selected text or region.
 17. Restart the app and confirm the last non-reset global zoom factor is retained.
 18. Configure one AI provider and send a short prompt from the left AI chat.
-19. Open the AI activity in the right workbench and confirm the Visual Lab renders a preview scene, playback controls advance steps, and sliders update values in A mode.
-20. Switch to B mode and confirm the HTML/JS sandbox preview loads in the iframe.
-21. Alt-drag a paragraph/table text region, click `Generate`, and confirm the Visual Lab requests the configured AI provider and renders both the generated A-mode scene and B-mode HTML demo or a clear error fallback.
-22. Ask the AI chat to translate or explain the selected context.
-23. Confirm streaming output appears as Markdown.
-24. Run `npm run build`.
+19. Open the AI activity in the right workbench and confirm the Visual Lab renders a preview scene.
+20. In A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
+21. Switch to B mode and confirm the HTML/JS sandbox preview loads in the iframe.
+22. In B mode, move the demo controls and confirm the iframe demo recomputes its diagram or animation without opening external resources.
+23. Alt-drag a paragraph/table text region, click `Generate`, and confirm the Visual Lab requests the configured AI provider and renders both the generated A-mode scene and B-mode HTML demo or a clear error fallback.
+24. Ask the AI chat to translate or explain the selected context.
+25. Confirm streaming output appears as Markdown.
+26. Run `npm run build`.
 
 ## AI Configuration
 
@@ -116,6 +118,20 @@ Check:
 ### AI chat area is hidden
 
 The chat lives in the collapsible left pane. Use the chat button in the far-left activity bar to show or hide it. Drag the vertical split handles to rebalance the three zones. If it still disappears, check the `threeZoneWorkspace`, `workspaceSplitHandle`, and `aiChatPanel` styles.
+
+### Visual Lab sliders do not change the scene
+
+Check:
+
+- A mode is selected, not B mode.
+- `apps/desktop/src/visualSimulation.ts` still exports `computeVisualSimulation`.
+- `VisualLab` passes the current `parameterValues` into `computeVisualSimulation`.
+- `SimulationLayer` receives `simulationState` and maps it to block counts, GPU lanes, metrics, and packet speed.
+- Generated `VisualSpec.parameters` have useful ranges and non-identical `min` / `max` values.
+
+### Visual Lab B mode looks unsafe or tries to load resources
+
+Do not run the generated HTML directly in the renderer. Keep it inside the `HtmlSandbox` iframe with `sandbox="allow-scripts"`, `referrerPolicy="no-referrer"`, and the restrictive CSP built by `buildSandboxSrcDoc`.
 
 ### UI zoom is wrong
 

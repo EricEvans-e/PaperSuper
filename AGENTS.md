@@ -11,6 +11,7 @@ PaperSuper is an Electron + React + TypeScript desktop prototype for a PDF-first
 - AI HTTP clients: `apps/desktop/electron/ai.ts`
 - Global UI zoom shortcuts and persistence: `apps/desktop/electron/main.ts`
 - PDF wrapper export: `apps/desktop/src/pdf-highlighter.ts`
+- Visual Lab local simulation engine: `apps/desktop/src/visualSimulation.ts`
 - Vendored PDF base: `react-pdf-highlighter/`
 - Docs: `docs/`
 
@@ -37,7 +38,9 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 - Keep global app zoom in Electron main via `webContents.setZoomFactor`; renderer may call the minimal `adjustUiZoom` preload fallback for keyboard layout compatibility.
 - Keep PDF-only zoom in the renderer/PDF reader path via `pdfScaleValue`; do not mix it with global app zoom.
 - Keep right-side structured visualization work in renderer-owned `VisualSpec` data and local React/SVG rendering.
+- Visual Lab A mode parameters should flow through `computeVisualSimulation`; sliders must visibly recompute local state, not only update numeric labels.
 - HTML/JS visual demos must stay inside the `VisualLab` iframe sandbox with CSP; do not run AI-generated HTML/JS directly in the renderer.
+- Treat AI-generated HTML/JS as untrusted teaching/demo content. It may run only in the sandboxed iframe and must not get renderer, Node, network, or file access.
 - API keys currently live in renderer `localStorage`; treat that as prototype-only.
 
 ## PDF Context Behavior
@@ -95,7 +98,7 @@ The current UI is a dark IDE shell with:
 - collapsible AI chat pane on the left, toggled from the activity bar
 - PDF pane in the center
 - reserved workbench pane on the right for Paper/AI/Settings tools
-- right AI Workspace renders a compact Visual Lab with A/B mode switching, playback, step focus, parameter sliders, and iframe sandbox HTML demos
+- right AI Workspace renders a compact Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, and iframe sandbox HTML demos
 - draggable vertical handles between the three zones
 - compact AI chat styling at narrow widths, with drag-to-collapse and same-drag reopen behavior
 

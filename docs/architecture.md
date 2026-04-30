@@ -48,6 +48,10 @@ Renderer React UI
   - Renders self-contained AI-generated HTML/JS demos inside a sandboxed iframe for B mode.
   - Calls the existing `window.paperSuper.sendAiMessage` bridge to generate both `VisualSpec` JSON and `htmlDemo` from the newest selected PDF context item.
   - Extracts and validates model JSON before rendering; failed generation falls back to a local preview scene.
+- `apps/desktop/src/visualSimulation.ts`
+  - Computes the local Visual Lab A-mode simulation state from `VisualSpec.parameters` and current slider values.
+  - Infers or uses `VisualSpec.simulation.model` for teaching-oriented models such as KV cache layout, attention flow, memory transfer, pipeline, or generic flow.
+  - Returns derived values for sequence length, KV pairs, interleave stride, block size, GPU lanes, bandwidth, block counts, locality, utilization, speed, and display metrics.
 - `apps/desktop/src/components/AiChatPanel.tsx`
   - Renders the left AI chat pane, Markdown AI answers, and stream event updates.
 
@@ -102,10 +106,12 @@ Renderer React UI
 4. `VisualLab` asks the current AI provider for strict JSON containing both `VisualSpec` and `htmlDemo` using `window.paperSuper.sendAiMessage`.
 5. The renderer extracts and validates the JSON into safe local primitives.
 6. A mode draws the scene with React/SVG instead of executing generated code.
-7. B mode injects the returned HTML body fragment into an iframe with `sandbox="allow-scripts"` and a restrictive CSP that disables network connections and external resources.
-8. Playback controls advance focused explanation steps in A mode.
-9. Parameter sliders update local visualization state such as visual energy, data count, and active window size in A mode; the HTML demo owns its internal sliders and recomputation in B mode.
-10. If generation fails or JSON is invalid, the panel keeps a local preview scene and displays the error.
+7. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
+8. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
+9. B mode injects the returned HTML body fragment into an iframe with `sandbox="allow-scripts"` and a restrictive CSP that disables network connections and external resources.
+10. B-mode demos own their internal controls and recomputation loop, but remain isolated from the renderer and native APIs.
+11. Playback controls advance focused explanation steps in A mode.
+12. If generation fails or JSON is invalid, the panel keeps a local preview scene and displays the error.
 
 ### Global UI Zoom
 
@@ -152,6 +158,7 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 - `AiStreamEvent`: `delta`, `done`, or `error`
 - `VisualSpec`: structured visualization scene rendered locally in the right AI Workspace
 - `VisualHtmlDemo`: self-contained HTML/JS demo rendered only inside the Visual Lab iframe sandbox
+- `VisualSimulationSpec`: optional model hint for the local Visual Lab simulation engine
 - `VisualNode`, `VisualEdge`, `VisualParameter`, and `VisualStep`: renderer-owned visual scene primitives
 
 ## Security Boundaries

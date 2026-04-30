@@ -833,6 +833,9 @@ select:disabled {
 }
 
 .visualCanvasShell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 6px;
   min-width: 0;
   min-height: 0;
   padding: 8px;
@@ -844,6 +847,55 @@ select:disabled {
   width: 100%;
   height: 100%;
   min-height: 210px;
+}
+
+.visualMetricStrip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.visualMetric {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid #2d3037;
+  border-radius: 6px;
+  background: #15171d;
+}
+
+.visualMetric span,
+.visualMetric strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visualMetric span {
+  color: #9aa0aa;
+  font-size: 9.8px;
+}
+
+.visualMetric strong {
+  color: #f5f6f8;
+  font-size: 11px;
+}
+
+.visualMetric.blue {
+  border-color: rgba(111, 156, 255, 0.42);
+}
+
+.visualMetric.green {
+  border-color: rgba(88, 192, 140, 0.42);
+}
+
+.visualMetric.amber {
+  border-color: rgba(242, 184, 107, 0.42);
+}
+
+.visualMetric.rose {
+  border-color: rgba(232, 111, 141, 0.42);
 }
 
 .visualSandboxShell {
@@ -931,6 +983,67 @@ select:disabled {
 
 .visualToken.active {
   fill: #6f9cff;
+}
+
+.visualSimulationLayer {
+  pointer-events: none;
+}
+
+.visualSimLabel {
+  fill: #8e96a4;
+  font-size: 9.5px;
+  font-weight: 750;
+}
+
+.visualSimBlock,
+.visualTransferBlock,
+.visualGpuLane {
+  transition:
+    fill 180ms ease,
+    opacity 180ms ease,
+    width 180ms ease,
+    height 180ms ease;
+}
+
+.visualSimBlock.k {
+  fill: #6f9cff;
+  opacity: 0.72;
+}
+
+.visualSimBlock.v {
+  fill: #f2b86b;
+  opacity: 0.72;
+}
+
+.visualSimBlock.kv {
+  fill: #3d444f;
+}
+
+.visualSimBlock.kv.active {
+  fill: #58c08c;
+  opacity: 0.95;
+}
+
+.visualTransferBlock {
+  fill: #6f9cff;
+  opacity: 0.66;
+}
+
+.visualGpuLane {
+  fill: #e86f8d;
+  opacity: 0.62;
+}
+
+.visualSimArrow {
+  fill: none;
+  stroke: #3e4652;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.visualSimPacket {
+  fill: #f5f6f8;
+  filter: drop-shadow(0 0 8px rgba(88, 192, 140, 0.8));
 }
 
 .visualNodeBox {

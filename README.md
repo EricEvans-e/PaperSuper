@@ -28,7 +28,9 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
 - Three-zone workspace: collapsible left AI chat, central PDF reader, and right interaction/reserved panel.
 - Left AI chat width and right reserved panel width can be adjusted manually and are persisted locally.
 - The left AI chat uses a compact layout at narrow widths, auto-collapses below the threshold, and can reopen during the same drag if pulled back right.
-- Right AI Workspace includes Visual Lab A/B output: A renders validated AI-generated `VisualSpec` data with local React/SVG playback and sliders; B renders an AI-generated self-contained HTML/JS demo inside an iframe sandbox for comparison.
+- Right AI Workspace includes Visual Lab A/B output:
+  - A mode renders validated AI-generated `VisualSpec` data with local React/SVG playback, parameter sliders, and a local simulation engine that recomputes blocks, active windows, GPU lanes, metrics, and animation speed as sliders move.
+  - B mode renders an AI-generated self-contained HTML/JS teaching demo inside an iframe sandbox, with its own controls and recomputation loop for comparison.
 - Global UI zoom uses `Ctrl/Cmd + +` or `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, and `Ctrl/Cmd + 0`, with the zoom factor persisted by Electron.
 - PDF reader zoom uses `Ctrl/Cmd + mouse wheel` inside the paper pane, affects only the PDF view, and keeps existing highlights aligned after scaling.
 
@@ -70,6 +72,8 @@ apps/desktop/electron/   Electron main process, preload bridge, AI HTTP clients
 apps/desktop/src/        React renderer app
 apps/desktop/src/components/
                          PDF pane, activity bar, title bar, workbench, Visual Lab
+apps/desktop/src/visualSimulation.ts
+                         Local parameter-driven simulation engine for Visual Lab A mode
 react-pdf-highlighter/   Vendored PDF highlighting source used by the app
 scripts/                 Local helper scripts
 docs/                    Architecture, runbook, and handoff notes

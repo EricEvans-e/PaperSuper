@@ -93,6 +93,18 @@ export interface VisualHtmlDemo {
   notes?: string;
 }
 
+export type VisualSimulationModel =
+  | "generic-flow"
+  | "kv-cache-layout"
+  | "attention-flow"
+  | "memory-transfer"
+  | "pipeline";
+
+export interface VisualSimulationSpec {
+  model: VisualSimulationModel;
+  description?: string;
+}
+
 export interface VisualSpec {
   id: string;
   title: string;
@@ -103,6 +115,7 @@ export interface VisualSpec {
   edges: VisualEdge[];
   parameters: VisualParameter[];
   steps: VisualStep[];
+  simulation?: VisualSimulationSpec;
   htmlDemo?: VisualHtmlDemo;
 }
 

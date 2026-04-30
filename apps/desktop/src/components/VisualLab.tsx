@@ -18,9 +18,14 @@ import type {
   VisualNode,
   VisualNodeTone,
   VisualParameter,
+  VisualSimulationModel,
   VisualSpec,
 } from "../types";
 import { makeId } from "../utils";
+import {
+  computeVisualSimulation,
+  type VisualSimulationState,
+} from "../visualSimulation";
 
 interface VisualLabProps {
   contextItems: AiContextItem[];
@@ -36,6 +41,13 @@ const allowedKinds = new Set<VisualSpec["kind"]>([
   "mechanism-animation",
   "equation-playground",
   "comparison",
+]);
+const allowedSimulationModels = new Set<VisualSimulationModel>([
+  "generic-flow",
+  "kv-cache-layout",
+  "attention-flow",
+  "memory-transfer",
+  "pipeline",
 ]);
 const allowedTones = new Set<VisualNodeTone>([
   "blue",
@@ -119,6 +131,7 @@ const buildVisualPrompt = ({
     '  "edges": [{"id": string, "from": string, "to": string, "label": string, "strength": number}],',
     '  "parameters": [{"id": string, "label": string, "min": number, "max": number, "step": number, "defaultValue": number, "unit": string}],',
     '  "steps": [{"id": string, "title": string, "description": string, "focusNodeIds": string[]}],',
+    '  "simulation": {"model": "kv-cache-layout" | "attention-flow" | "memory-transfer" | "pipeline" | "generic-flow", "description": string},',
     '  "htmlDemo": {"title": string, "notes": string, "html": string}',
     "}",
     "",
@@ -130,12 +143,13 @@ const buildVisualPrompt = ({
     "- Coordinates use a 700 x 360 SVG canvas. Keep x between 70 and 630, y between 70 and 290.",
     "- Edges show data flow, dependency, transformation, or comparison. strength is 0.2 to 1.",
     "- Parameters must be meaningful knobs from the passage. Use 2 to 4 sliders.",
+    "- The structured A track must be parameter-driven: choose simulation.model so local recomputation can change block counts, flow speed, active windows, and metrics.",
     "- Steps must form a dynamic explanation path. Use 3 to 5 steps and focus existing node ids.",
     "- Keep labels compact. detail strings should be short.",
     "- htmlDemo.html must be a self-contained BODY fragment, not a full document. It may include <style>, HTML, inline <svg>, and <script>.",
     "- htmlDemo.html must not load external resources, use fetch/WebSocket, use import, use eval/new Function, or navigate the page.",
-    "- htmlDemo.html should include its own sliders or controls and recompute its animation/diagram when parameters change.",
-    "- htmlDemo.html should visually explain the same mechanism as the structured nodes/edges, but it may be richer and more customized.",
+    "- htmlDemo.html is B track. It is for demonstration and teaching, so it must include visible controls, metrics, and a compute/recalc function that changes the diagram or animation whenever sliders move.",
+    "- htmlDemo.html should visually explain the same mechanism as the structured nodes/edges, but it may be richer and more customized than A track.",
     "",
     `Paper title: ${paper.title || "Untitled PDF"}`,
     `Selected page: ${activeContext.pageNumber || "unknown"}`,
@@ -286,6 +300,39 @@ const normalizeHtmlDemo = (
     notes: safeString(item.notes, "HTML/JS sandbox preview", 160),
     html,
   };
+};
+
+const normalizeSimulation = (
+  raw: unknown,
+  fallbackModel: VisualSimulationModel,
+) => {
+  const source = raw && typeof raw === "object"
+    ? (raw as { model?: unknown; description?: unknown })
+    : {};
+  const model = allowedSimulationModels.has(source.model as VisualSimulationModel)
+    ? (source.model as VisualSimulationModel)
+    : fallbackModel;
+
+  return {
+    model,
+    description: safeString(source.description, "", 160) || undefined,
+  };
+};
+
+const inferSimulationModelFromText = (text: string): VisualSimulationModel => {
+  if (/kv|cache|interleav|gpu|kernel|block|transfer|memory|缓存|交织|块|传输/i.test(text)) {
+    return "kv-cache-layout";
+  }
+
+  if (/attention|query|key|value|softmax|token|注意力/i.test(text)) {
+    return "attention-flow";
+  }
+
+  if (/pipeline|stage|latency|流水|阶段/i.test(text)) {
+    return "pipeline";
+  }
+
+  return "generic-flow";
 };
 
 // 结构化轨道是主安全路径：AI 只给数据，渲染和交互都由本地 React/SVG 接管。
@@ -444,6 +491,14 @@ const normalizeVisualSpec = (
   const kind = allowedKinds.has(source.kind as VisualSpec["kind"])
     ? (source.kind as VisualSpec["kind"])
     : "mechanism-animation";
+  const fallbackSimulationModel = inferSimulationModelFromText(
+    [
+      source.title,
+      source.summary,
+      ...nodes.flatMap((node) => [node.label, node.detail]),
+      ...parameters.flatMap((parameter) => [parameter.id, parameter.label]),
+    ].join(" "),
+  );
 
   const baseSpec: VisualSpecBase = {
     id: `visual-${activeContext.id}-${Date.now()}`,
@@ -459,6 +514,7 @@ const normalizeVisualSpec = (
     edges,
     parameters,
     steps,
+    simulation: normalizeSimulation(source.simulation, fallbackSimulationModel),
   };
 
   return {
@@ -579,29 +635,36 @@ const createMockVisualSpec = (
     parameters: [
       {
         id: "sequenceLength",
-        label: "Sequence",
+        label: "序列长度",
+        min: 16,
+        max: 2048,
+        step: 1,
+        defaultValue: 256,
+        unit: "token",
+      },
+      {
+        id: "kvPairs",
+        label: "KV 对数",
         min: 4,
-        max: 64,
+        max: 96,
         step: 1,
         defaultValue: 16,
-        unit: "tok",
       },
       {
-        id: "attentionSharpness",
-        label: "Focus",
+        id: "interleaveStride",
+        label: "交织步长",
         min: 1,
-        max: 10,
-        step: 1,
-        defaultValue: 6,
-      },
-      {
-        id: "contextWindow",
-        label: "Window",
-        min: 1,
-        max: 8,
+        max: 32,
         step: 1,
         defaultValue: 4,
-        unit: "lines",
+      },
+      {
+        id: "gpuLanes",
+        label: "GPU 并行度",
+        min: 4,
+        max: 128,
+        step: 1,
+        defaultValue: 32,
       },
     ],
     steps: [
@@ -630,6 +693,10 @@ const createMockVisualSpec = (
         focusNodeIds: ["softmax", "output"],
       },
     ],
+    simulation: {
+      model: "kv-cache-layout",
+      description: "KV cache layout teaching simulation",
+    },
   };
 
   return {
@@ -677,6 +744,10 @@ export function VisualLab({
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [viewMode, setViewMode] = useState<VisualViewMode>("structured");
+  const simulationState = useMemo(
+    () => computeVisualSimulation(spec, parameterValues),
+    [parameterValues, spec],
+  );
 
   useEffect(() => {
     setGeneratedSpec(null);
@@ -743,7 +814,7 @@ export function VisualLab({
       const response = await window.paperSuper?.sendAiMessage({
         config: {
           ...modelConfig,
-          maxTokens: Math.max(modelConfig.maxTokens, 1800),
+          maxTokens: Math.max(modelConfig.maxTokens, 3200),
         },
         paperTitle: paper.title,
         contextItems: [
@@ -830,6 +901,7 @@ export function VisualLab({
               nodes={spec.nodes}
               parameters={spec.parameters}
               parameterValues={parameterValues}
+              simulationState={simulationState}
             />
 
             <div className="visualPlayback">
@@ -945,6 +1017,7 @@ function VisualCanvas({
   nodes,
   parameters,
   parameterValues,
+  simulationState,
 }: {
   edges: VisualEdge[];
   focusNodeIds: Set<string>;
@@ -952,6 +1025,7 @@ function VisualCanvas({
   nodes: VisualNode[];
   parameters: VisualParameter[];
   parameterValues: Record<string, number>;
+  simulationState: VisualSimulationState;
 }) {
   const normalizedParameters = parameters.map((parameter) =>
     normalizedValue(parameter, parameterValues),
@@ -979,7 +1053,7 @@ function VisualCanvas({
   const windowSize = windowParameter
     ? Math.round(2 + normalizedValue(windowParameter, parameterValues) * 10)
     : 4;
-  const animationSpeed = Math.max(1, 3.2 - visualEnergy * 1.6);
+  const animationSpeed = Math.max(0.75, 3.2 - visualEnergy * 1.1 - simulationState.utilization);
   const signalRadius = 3.5 + visualEnergy * 3.5;
 
   return (
@@ -1087,6 +1161,11 @@ function VisualCanvas({
           })}
         </g>
 
+        <SimulationLayer
+          isPlaying={isPlaying}
+          simulationState={simulationState}
+        />
+
         {nodes.map((node) => {
           const isFocused = focusNodeIds.has(node.id);
           return (
@@ -1114,6 +1193,134 @@ function VisualCanvas({
           );
         })}
       </svg>
+
+      <div className="visualMetricStrip">
+        {simulationState.metrics.map((metric) => (
+          <div className={`visualMetric ${metric.tone}`} key={metric.id}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
     </div>
+  );
+}
+
+function SimulationLayer({
+  isPlaying,
+  simulationState,
+}: {
+  isPlaying: boolean;
+  simulationState: VisualSimulationState;
+}) {
+  const kBlocks = Math.min(18, Math.max(5, Math.round(simulationState.sequenceLength / 96)));
+  const vBlocks = kBlocks;
+  const kvBlocks = Math.min(
+    22,
+    Math.max(6, Math.round(simulationState.unitCount / 320)),
+  );
+  const activeKvBlocks = Math.min(
+    kvBlocks,
+    Math.max(2, Math.round(simulationState.interleaveStride / 3)),
+  );
+  const transferBlocks = Math.min(
+    16,
+    Math.max(3, Math.round(simulationState.transferBlocks / 2)),
+  );
+  const gpuLaneCount = Math.min(
+    12,
+    Math.max(3, Math.round(simulationState.gpuLanes / 10)),
+  );
+  const flowDuration = `${Math.max(0.75, 3.4 - simulationState.speed * 0.72).toFixed(2)}s`;
+
+  // 参数变化会先进入 SimulationEngine 重算，再由这里把数量、路径和速度映射到 SVG。
+  return (
+    <g className="visualSimulationLayer">
+      <text className="visualSimLabel" x="42" y="282">
+        K cache
+      </text>
+      <text className="visualSimLabel" x="42" y="314">
+        V cache
+      </text>
+      {Array.from({ length: kBlocks }).map((_, index) => (
+        <rect
+          className="visualSimBlock k"
+          height="14"
+          key={`k-${index}`}
+          rx="3"
+          width="8"
+          x={96 + index * 9}
+          y="270"
+        />
+      ))}
+      {Array.from({ length: vBlocks }).map((_, index) => (
+        <rect
+          className="visualSimBlock v"
+          height="14"
+          key={`v-${index}`}
+          rx="3"
+          width="8"
+          x={96 + index * 9}
+          y="302"
+        />
+      ))}
+
+      <path className="visualSimArrow" d="M 270 286 C 300 286 302 292 328 292" />
+      <text className="visualSimLabel" x="330" y="268">
+        token-wise interleaving
+      </text>
+      {Array.from({ length: kvBlocks }).map((_, index) => (
+        <rect
+          className={`visualSimBlock kv ${index < activeKvBlocks ? "active" : ""}`}
+          height="24"
+          key={`kv-${index}`}
+          rx="4"
+          width="9"
+          x={330 + index * 10}
+          y="280"
+        />
+      ))}
+
+      <path className="visualSimArrow" d="M 570 292 C 592 292 594 292 612 292" />
+      <text className="visualSimLabel" x="498" y="328">
+        block transfer x {simulationState.transferBlocks}
+      </text>
+      {Array.from({ length: transferBlocks }).map((_, index) => (
+        <rect
+          className="visualTransferBlock"
+          height="8"
+          key={`transfer-${index}`}
+          rx="2"
+          width="12"
+          x={496 + index * 13}
+          y="306"
+        />
+      ))}
+
+      <text className="visualSimLabel" x="612" y="268">
+        GPU lanes
+      </text>
+      {Array.from({ length: gpuLaneCount }).map((_, index) => (
+        <rect
+          className="visualGpuLane"
+          height="5"
+          key={`lane-${index}`}
+          rx="2"
+          width="42"
+          x="612"
+          y={278 + index * 7}
+        />
+      ))}
+
+      {isPlaying ? (
+        <circle className="visualSimPacket" r="5">
+          <animateMotion
+            dur={flowDuration}
+            path="M 110 286 C 230 286 260 292 346 292 C 450 292 530 292 652 292"
+            repeatCount="indefinite"
+          />
+        </circle>
+      ) : null}
+    </g>
   );
 }
