@@ -49,7 +49,11 @@ export type VisualKind =
   | "concept-flow"
   | "mechanism-animation"
   | "equation-playground"
-  | "comparison";
+  | "comparison"
+  | "architecture"
+  | "matrix"
+  | "geometry"
+  | "timeline";
 
 export type VisualNodeTone = "blue" | "green" | "amber" | "rose" | "neutral";
 
@@ -85,6 +89,40 @@ export interface VisualStep {
   title: string;
   description: string;
   focusNodeIds: string[];
+  focusElementIds?: string[];
+}
+
+export type VisualElementKind =
+  | "rect"
+  | "circle"
+  | "text"
+  | "formula"
+  | "matrix"
+  | "layer"
+  | "bracket"
+  | "annotation"
+  | "bar"
+  | "axis"
+  | "arrow";
+
+export interface VisualElement {
+  id: string;
+  kind: VisualElementKind;
+  label?: string;
+  detail?: string;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  radius?: number;
+  tone?: VisualNodeTone;
+  value?: number;
+  rows?: number;
+  cols?: number;
+  cells?: number[];
+  points?: Array<{ x: number; y: number }>;
+  targetId?: string;
+  parameterId?: string;
 }
 
 export interface VisualHtmlDemo {
@@ -115,6 +153,7 @@ export interface VisualSpec {
   edges: VisualEdge[];
   parameters: VisualParameter[];
   steps: VisualStep[];
+  visualElements?: VisualElement[];
   simulation?: VisualSimulationSpec;
   htmlDemo?: VisualHtmlDemo;
 }

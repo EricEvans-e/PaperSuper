@@ -14,6 +14,8 @@ import type {
   ModelConfig,
   PaperDocument,
   VisualEdge,
+  VisualElement,
+  VisualElementKind,
   VisualHtmlDemo,
   VisualNode,
   VisualNodeTone,
@@ -41,6 +43,10 @@ const allowedKinds = new Set<VisualSpec["kind"]>([
   "mechanism-animation",
   "equation-playground",
   "comparison",
+  "architecture",
+  "matrix",
+  "geometry",
+  "timeline",
 ]);
 const allowedSimulationModels = new Set<VisualSimulationModel>([
   "generic-flow",
@@ -55,6 +61,19 @@ const allowedTones = new Set<VisualNodeTone>([
   "amber",
   "rose",
   "neutral",
+]);
+const allowedElementKinds = new Set<VisualElementKind>([
+  "rect",
+  "circle",
+  "text",
+  "formula",
+  "matrix",
+  "layer",
+  "bracket",
+  "annotation",
+  "bar",
+  "axis",
+  "arrow",
 ]);
 
 const clamp = (value: number, min: number, max: number) =>
@@ -111,6 +130,18 @@ const normalizedValue = (
   return clamp((value - parameter.min) / (parameter.max - parameter.min), 0, 1);
 };
 
+const elementParameterValue = (
+  element: VisualElement,
+  parameters: VisualParameter[],
+  values: Record<string, number>,
+) => {
+  const parameter = element.parameterId
+    ? parameters.find((item) => item.id === element.parameterId)
+    : undefined;
+
+  return parameter ? normalizedValue(parameter, values) : 0.5;
+};
+
 const buildVisualPrompt = ({
   activeContext,
   paper,
@@ -125,12 +156,13 @@ const buildVisualPrompt = ({
     "The JSON must match this TypeScript shape:",
     "{",
     '  "title": string,',
-    '  "kind": "mechanism-animation" | "concept-flow" | "equation-playground" | "comparison",',
+    '  "kind": "mechanism-animation" | "concept-flow" | "equation-playground" | "comparison" | "architecture" | "matrix" | "geometry" | "timeline",',
     '  "summary": string,',
     '  "nodes": [{"id": string, "label": string, "detail": string, "x": number, "y": number, "tone": "blue" | "green" | "amber" | "rose" | "neutral"}],',
     '  "edges": [{"id": string, "from": string, "to": string, "label": string, "strength": number}],',
+    '  "visualElements": [{"id": string, "kind": "rect" | "circle" | "text" | "formula" | "matrix" | "layer" | "bracket" | "annotation" | "bar" | "axis" | "arrow", "label": string, "detail": string, "x": number, "y": number, "width": number, "height": number, "radius": number, "tone": "blue" | "green" | "amber" | "rose" | "neutral", "value": number, "rows": number, "cols": number, "cells": number[], "points": [{"x": number, "y": number}], "targetId": string, "parameterId": string}],',
     '  "parameters": [{"id": string, "label": string, "min": number, "max": number, "step": number, "defaultValue": number, "unit": string}],',
-    '  "steps": [{"id": string, "title": string, "description": string, "focusNodeIds": string[]}],',
+    '  "steps": [{"id": string, "title": string, "description": string, "focusNodeIds": string[], "focusElementIds": string[]}],',
     '  "simulation": {"model": "kv-cache-layout" | "attention-flow" | "memory-transfer" | "pipeline" | "generic-flow", "description": string},',
     '  "htmlDemo": {"title": string, "notes": string, "html": string}',
     "}",
@@ -138,13 +170,16 @@ const buildVisualPrompt = ({
     "Design requirements:",
     "- Convert the selected paper passage into an interactive learning scene, not a generic chart.",
     "- All user-visible text should be Simplified Chinese, while important terms such as token, KV cache, GPU kernel, attention, softmax, query, key, value, interleaving should stay in English when clearer.",
-    "- Prefer mechanism-animation when the passage describes a process, algorithm, cache layout, memory transfer, model architecture, or computation pipeline.",
-    "- Nodes are modules/concepts in the passage. Use 4 to 7 nodes.",
+    "- Choose the diagram form from the passage. Use architecture for model/component structure, matrix for attention/tensor/table mechanisms, equation-playground for formulas, comparison for ablations/tradeoffs, geometry for spatial methods, timeline for training/inference stages, and mechanism-animation for processes.",
+    "- Nodes are only for major modules/concepts. Use 3 to 7 nodes, but do not force every visual detail into nodes.",
+    "- visualElements are the flexible structured drawing layer for A track. Use them to create model structure diagrams, matrices, tensor grids, grouped layers, brackets, labels, formulas, axes, bars, callouts, or spatial layouts.",
+    "- Prefer visualElements whenever a flowchart is not enough. A good A track should be able to look like a model architecture diagram, attention matrix, layer stack, equation schematic, or comparison panel.",
     "- Coordinates use a 700 x 360 SVG canvas. Keep x between 70 and 630, y between 70 and 290.",
+    "- visualElements also use the same 700 x 360 canvas. Keep elements within the visible canvas and avoid overlaps. Use width/height/radius appropriate to the kind.",
     "- Edges show data flow, dependency, transformation, or comparison. strength is 0.2 to 1.",
     "- Parameters must be meaningful knobs from the passage. Use 2 to 4 sliders.",
-    "- The structured A track must be parameter-driven: choose simulation.model so local recomputation can change block counts, flow speed, active windows, and metrics.",
-    "- Steps must form a dynamic explanation path. Use 3 to 5 steps and focus existing node ids.",
+    "- The structured A track must be parameter-driven: choose simulation.model and, when useful, set visualElements.parameterId so local sliders can change visible sizes, intensity, bars, matrix cells, or emphasis.",
+    "- Steps must form a dynamic explanation path. Use 3 to 5 steps and focus existing node ids and/or visualElement ids.",
     "- Keep labels compact. detail strings should be short.",
     "- htmlDemo.html must be a self-contained BODY fragment, not a full document. It may include <style>, HTML, inline <svg>, and <script>.",
     "- htmlDemo.html must not load external resources, use fetch/WebSocket, use import, use eval/new Function, or navigate the page.",
@@ -457,7 +492,58 @@ const normalizeVisualSpec = (
     );
   }
 
+  const parameterIds = new Set(parameters.map((parameter) => parameter.id));
+  const rawElements = Array.isArray(source.visualElements)
+    ? source.visualElements
+    : [];
+  const visualElements = rawElements
+    .slice(0, 36)
+    .map((element, index) => {
+      const item = element as Partial<VisualElement>;
+      const kind = allowedElementKinds.has(item.kind as VisualElementKind)
+        ? (item.kind as VisualElementKind)
+        : "rect";
+      const tone = allowedTones.has(item.tone as VisualNodeTone)
+        ? (item.tone as VisualNodeTone)
+        : (["blue", "green", "amber", "rose", "neutral"][index % 5] as VisualNodeTone);
+      const points = Array.isArray(item.points)
+        ? item.points.slice(0, 8).map((point) => ({
+            x: clamp(Number(point?.x) || 0, 0, 700),
+            y: clamp(Number(point?.y) || 0, 0, 360),
+          }))
+        : undefined;
+      const rows = clamp(Math.round(Number(item.rows) || 3), 1, 12);
+      const cols = clamp(Math.round(Number(item.cols) || 3), 1, 12);
+      const cells = Array.isArray(item.cells)
+        ? item.cells
+            .slice(0, rows * cols)
+            .map((cell) => clamp(Number(cell) || 0, 0, 1))
+        : undefined;
+      const parameterId = safeId(item.parameterId, "");
+
+      return {
+        id: safeId(item.id, `element-${index + 1}`),
+        kind,
+        label: safeString(item.label, "", 26) || undefined,
+        detail: safeString(item.detail, "", 72) || undefined,
+        x: clamp(Number(item.x) || 100 + index * 20, 20, 680),
+        y: clamp(Number(item.y) || 90 + index * 12, 20, 340),
+        width: clamp(Number(item.width) || 90, 12, 620),
+        height: clamp(Number(item.height) || 44, 8, 300),
+        radius: clamp(Number(item.radius) || 18, 3, 140),
+        tone,
+        value: clamp(Number(item.value) || 0.5, 0, 1),
+        rows,
+        cols,
+        cells,
+        points,
+        targetId: safeId(item.targetId, "") || undefined,
+        parameterId: parameterIds.has(parameterId) ? parameterId : undefined,
+      };
+    });
+
   const rawSteps = Array.isArray(source.steps) ? source.steps : [];
+  const elementIds = new Set(visualElements.map((element) => element.id));
   const steps = rawSteps
     .slice(0, 6)
     .map((step, index) => {
@@ -468,12 +554,19 @@ const normalizeVisualSpec = (
             .filter((id) => nodeIds.has(id))
             .slice(0, 3)
         : [];
+      const focusElementIds = Array.isArray(item.focusElementIds)
+        ? item.focusElementIds
+            .map((id) => safeId(id, ""))
+            .filter((id) => elementIds.has(id))
+            .slice(0, 5)
+        : [];
 
       return {
         id: safeId(item.id, `step-${index + 1}`),
         title: safeString(item.title, `Step ${index + 1}`, 24),
         description: safeString(item.description, "Explain this transition.", 120),
         focusNodeIds: focusNodeIds.length > 0 ? focusNodeIds : [nodes[index % nodes.length].id],
+        focusElementIds,
       };
     });
 
@@ -484,6 +577,7 @@ const normalizeVisualSpec = (
         title: node.label,
         description: node.detail,
         focusNodeIds: [node.id],
+        focusElementIds: visualElements[index] ? [visualElements[index].id] : [],
       });
     });
   }
@@ -514,6 +608,7 @@ const normalizeVisualSpec = (
     edges,
     parameters,
     steps,
+    visualElements,
     simulation: normalizeSimulation(source.simulation, fallbackSimulationModel),
   };
 
@@ -667,30 +762,92 @@ const createMockVisualSpec = (
         defaultValue: 32,
       },
     ],
+    visualElements: [
+      {
+        id: "embedding-matrix",
+        kind: "matrix",
+        label: "Attention scores",
+        detail: "Query x Key",
+        x: 304,
+        y: 66,
+        width: 118,
+        height: 96,
+        rows: 5,
+        cols: 6,
+        cells: [
+          0.2, 0.4, 0.7, 0.5, 0.3, 0.25,
+          0.15, 0.35, 0.8, 0.62, 0.42, 0.3,
+          0.12, 0.28, 0.76, 0.9, 0.55, 0.36,
+          0.1, 0.22, 0.48, 0.72, 0.86, 0.5,
+          0.08, 0.18, 0.32, 0.52, 0.7, 0.92,
+        ],
+        tone: "blue",
+        parameterId: "sequenceLength",
+      },
+      {
+        id: "kv-stack",
+        kind: "layer",
+        label: "KV cache blocks",
+        detail: "Paged memory layout",
+        x: 450,
+        y: 76,
+        width: 150,
+        height: 84,
+        tone: "green",
+        parameterId: "kvPairs",
+      },
+      {
+        id: "softmax-formula",
+        kind: "formula",
+        label: "softmax(QK^T / sqrt(d)) V",
+        detail: "weighted aggregation",
+        x: 328,
+        y: 222,
+        width: 190,
+        height: 38,
+        tone: "amber",
+      },
+      {
+        id: "latency-bar",
+        kind: "bar",
+        label: "GPU utilization",
+        x: 532,
+        y: 220,
+        width: 112,
+        height: 18,
+        value: 0.62,
+        tone: "rose",
+        parameterId: "gpuLanes",
+      },
+    ],
     steps: [
       {
         id: "input",
         title: "Input",
         description: "Tokens enter the mechanism as separate positions.",
         focusNodeIds: ["tokens"],
+        focusElementIds: [],
       },
       {
         id: "projection",
         title: "Projection",
         description: "The selected position creates query signals and matching keys.",
         focusNodeIds: ["query", "key"],
+        focusElementIds: ["embedding-matrix"],
       },
       {
         id: "score",
         title: "Score",
         description: "Query and key vectors produce attention scores.",
         focusNodeIds: ["score"],
+        focusElementIds: ["embedding-matrix", "softmax-formula"],
       },
       {
         id: "mix",
         title: "Normalize",
         description: "Softmax turns scores into weights before values are mixed.",
         focusNodeIds: ["softmax", "output"],
+        focusElementIds: ["kv-stack", "latency-bar"],
       },
     ],
     simulation: {
@@ -775,6 +932,7 @@ export function VisualLab({
 
   const activeStep = spec.steps[activeStepIndex];
   const focusNodeIds = new Set(activeStep.focusNodeIds);
+  const focusElementIds = new Set(activeStep.focusElementIds ?? []);
 
   const updateParameter = (parameter: VisualParameter, value: number) => {
     setParameterValues((current) => ({
@@ -896,12 +1054,14 @@ export function VisualLab({
           <>
             <VisualCanvas
               edges={spec.edges}
+              focusElementIds={focusElementIds}
               focusNodeIds={focusNodeIds}
               isPlaying={isPlaying}
               nodes={spec.nodes}
               parameters={spec.parameters}
               parameterValues={parameterValues}
               simulationState={simulationState}
+              visualElements={spec.visualElements ?? []}
             />
 
             <div className="visualPlayback">
@@ -1012,20 +1172,24 @@ function HtmlSandbox({ htmlDemo }: { htmlDemo: VisualHtmlDemo }) {
 
 function VisualCanvas({
   edges,
+  focusElementIds,
   focusNodeIds,
   isPlaying,
   nodes,
   parameters,
   parameterValues,
   simulationState,
+  visualElements,
 }: {
   edges: VisualEdge[];
+  focusElementIds: Set<string>;
   focusNodeIds: Set<string>;
   isPlaying: boolean;
   nodes: VisualNode[];
   parameters: VisualParameter[];
   parameterValues: Record<string, number>;
   simulationState: VisualSimulationState;
+  visualElements: VisualElement[];
 }) {
   const normalizedParameters = parameters.map((parameter) =>
     normalizedValue(parameter, parameterValues),
@@ -1100,6 +1264,18 @@ function VisualCanvas({
             y2={56 + index * 58}
           />
         ))}
+
+        <g className="visualElementLayer">
+          {visualElements.map((element) => (
+            <VisualElementShape
+              element={element}
+              focusElementIds={focusElementIds}
+              key={element.id}
+              parameters={parameters}
+              parameterValues={parameterValues}
+            />
+          ))}
+        </g>
 
         {edges.map((edge) => {
           const from = nodeById(nodes, edge.from);
@@ -1203,6 +1379,262 @@ function VisualCanvas({
         ))}
       </div>
     </div>
+  );
+}
+
+function VisualElementShape({
+  element,
+  focusElementIds,
+  parameters,
+  parameterValues,
+}: {
+  element: VisualElement;
+  focusElementIds: Set<string>;
+  parameters: VisualParameter[];
+  parameterValues: Record<string, number>;
+}) {
+  const isFocused = focusElementIds.has(element.id);
+  const parameterEnergy = elementParameterValue(element, parameters, parameterValues);
+  const tone = element.tone ?? "neutral";
+  const width = element.width ?? 90;
+  const height = element.height ?? 44;
+  const radius = element.radius ?? 18;
+  const value = clamp((element.value ?? 0.5) * 0.55 + parameterEnergy * 0.45, 0, 1);
+  const className = `visualElement ${element.kind} ${tone} ${isFocused ? "active" : ""}`;
+
+  if (element.kind === "matrix") {
+    const rows = element.rows ?? 3;
+    const cols = element.cols ?? 3;
+    const gap = 3;
+    const cellWidth = Math.max(5, (width - gap * (cols - 1)) / cols);
+    const cellHeight = Math.max(5, (height - gap * (rows - 1)) / rows);
+    const cells = element.cells ?? [];
+
+    return (
+      <g className={className}>
+        {element.label ? (
+          <text className="visualElementLabel" x={element.x} y={element.y - 8}>
+            {element.label}
+          </text>
+        ) : null}
+        {Array.from({ length: rows * cols }).map((_, index) => {
+          const row = Math.floor(index / cols);
+          const col = index % cols;
+          const cellValue = clamp(
+            (cells[index] ?? ((row + col + 1) / (rows + cols))) * 0.62 +
+              parameterEnergy * 0.38,
+            0.05,
+            1,
+          );
+
+          return (
+            <rect
+              className="visualMatrixCell"
+              height={cellHeight}
+              key={`${element.id}-cell-${index}`}
+              opacity={0.24 + cellValue * 0.68}
+              rx="3"
+              width={cellWidth}
+              x={element.x + col * (cellWidth + gap)}
+              y={element.y + row * (cellHeight + gap)}
+            />
+          );
+        })}
+      </g>
+    );
+  }
+
+  if (element.kind === "layer") {
+    const layerCount = Math.max(3, Math.round(3 + parameterEnergy * 6));
+    return (
+      <g className={className}>
+        {Array.from({ length: layerCount }).map((_, index) => (
+          <rect
+            className="visualLayerPlate"
+            height={height}
+            key={`${element.id}-layer-${index}`}
+            rx="7"
+            width={width}
+            x={element.x + index * 6}
+            y={element.y + index * 5}
+          />
+        ))}
+        {element.label ? (
+          <text className="visualElementLabel" x={element.x + 10} y={element.y + 20}>
+            {element.label}
+          </text>
+        ) : null}
+        {element.detail ? (
+          <text className="visualElementDetail" x={element.x + 10} y={element.y + 36}>
+            {element.detail}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+
+  if (element.kind === "formula") {
+    return (
+      <g className={className}>
+        <rect
+          className="visualFormulaBox"
+          height={height}
+          rx="9"
+          width={width}
+          x={element.x}
+          y={element.y}
+        />
+        <text className="visualFormulaText" x={element.x + 12} y={element.y + height / 2 + 4}>
+          {element.label}
+        </text>
+      </g>
+    );
+  }
+
+  if (element.kind === "bar") {
+    return (
+      <g className={className}>
+        {element.label ? (
+          <text className="visualElementLabel" x={element.x} y={element.y - 8}>
+            {element.label}
+          </text>
+        ) : null}
+        <rect
+          className="visualBarTrack"
+          height={height}
+          rx={height / 2}
+          width={width}
+          x={element.x}
+          y={element.y}
+        />
+        <rect
+          className="visualBarFill"
+          height={height}
+          rx={height / 2}
+          width={Math.max(6, width * value)}
+          x={element.x}
+          y={element.y}
+        />
+      </g>
+    );
+  }
+
+  if (element.kind === "circle") {
+    const animatedRadius = radius * (0.72 + parameterEnergy * 0.48);
+    return (
+      <g className={className}>
+        <circle
+          className="visualElementCircle"
+          cx={element.x}
+          cy={element.y}
+          r={animatedRadius}
+        />
+        {element.label ? (
+          <text className="visualElementLabel centered" x={element.x} y={element.y + 4}>
+            {element.label}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+
+  if (element.kind === "text" || element.kind === "annotation") {
+    return (
+      <g className={className}>
+        {element.kind === "annotation" ? (
+          <path
+            className="visualAnnotationLine"
+            d={`M ${element.x - 18} ${element.y + 8} C ${element.x - 42} ${element.y - 8}, ${element.x - 34} ${element.y - 24}, ${element.x - 5} ${element.y - 22}`}
+          />
+        ) : null}
+        <text className="visualElementLabel" x={element.x} y={element.y}>
+          {element.label}
+        </text>
+        {element.detail ? (
+          <text className="visualElementDetail" x={element.x} y={element.y + 15}>
+            {element.detail}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+
+  if (element.kind === "bracket") {
+    return (
+      <g className={className}>
+        <path
+          className="visualBracket"
+          d={`M ${element.x + width} ${element.y} H ${element.x} V ${element.y + height} H ${element.x + width}`}
+        />
+        {element.label ? (
+          <text className="visualElementLabel" x={element.x + width + 8} y={element.y + height / 2 + 4}>
+            {element.label}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+
+  if (element.kind === "axis") {
+    return (
+      <g className={className}>
+        <path
+          className="visualAxis"
+          d={`M ${element.x} ${element.y + height} H ${element.x + width} M ${element.x} ${element.y + height} V ${element.y}`}
+        />
+        {element.label ? (
+          <text className="visualElementDetail" x={element.x + width - 48} y={element.y + height + 16}>
+            {element.label}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+
+  if (element.kind === "arrow") {
+    const points = element.points?.length
+      ? element.points
+      : [
+          { x: element.x, y: element.y },
+          { x: element.x + width, y: element.y + height },
+        ];
+    const path = points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
+
+    return (
+      <g className={className}>
+        <path className="visualElementArrow" d={path} />
+        {element.label ? (
+          <text className="visualElementDetail" x={points[0].x + 8} y={points[0].y - 6}>
+            {element.label}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+
+  return (
+    <g className={className}>
+      <rect
+        className="visualElementRect"
+        height={height * (0.88 + parameterEnergy * 0.22)}
+        rx="8"
+        width={width * (0.9 + parameterEnergy * 0.18)}
+        x={element.x}
+        y={element.y}
+      />
+      {element.label ? (
+        <text className="visualElementLabel" x={element.x + 10} y={element.y + 20}>
+          {element.label}
+        </text>
+      ) : null}
+      {element.detail ? (
+        <text className="visualElementDetail" x={element.x + 10} y={element.y + 36}>
+          {element.detail}
+        </text>
+      ) : null}
+    </g>
   );
 }
 

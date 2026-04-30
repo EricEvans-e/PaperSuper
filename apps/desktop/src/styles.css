@@ -948,6 +948,175 @@ select:disabled {
   stroke-width: 1;
 }
 
+.visualElementLayer {
+  pointer-events: none;
+}
+
+.visualElement {
+  opacity: 0.88;
+}
+
+.visualElement.active {
+  opacity: 1;
+}
+
+.visualElementRect,
+.visualFormulaBox,
+.visualLayerPlate,
+.visualElementCircle,
+.visualBarTrack,
+.visualBarFill,
+.visualMatrixCell {
+  transition:
+    fill 180ms ease,
+    opacity 180ms ease,
+    r 180ms ease,
+    width 180ms ease,
+    height 180ms ease,
+    transform 180ms ease;
+}
+
+.visualElementRect,
+.visualFormulaBox,
+.visualLayerPlate {
+  fill: #1a1d24;
+  stroke: #393f4b;
+  stroke-width: 1.1;
+}
+
+.visualElementCircle {
+  fill: rgba(26, 29, 36, 0.78);
+  stroke: #393f4b;
+  stroke-width: 1.2;
+}
+
+.visualElement.blue .visualElementRect,
+.visualElement.blue .visualFormulaBox,
+.visualElement.blue .visualLayerPlate,
+.visualElement.blue .visualElementCircle {
+  stroke: rgba(111, 156, 255, 0.72);
+}
+
+.visualElement.green .visualElementRect,
+.visualElement.green .visualFormulaBox,
+.visualElement.green .visualLayerPlate,
+.visualElement.green .visualElementCircle {
+  stroke: rgba(88, 192, 140, 0.72);
+}
+
+.visualElement.amber .visualElementRect,
+.visualElement.amber .visualFormulaBox,
+.visualElement.amber .visualLayerPlate,
+.visualElement.amber .visualElementCircle {
+  stroke: rgba(242, 184, 107, 0.72);
+}
+
+.visualElement.rose .visualElementRect,
+.visualElement.rose .visualFormulaBox,
+.visualElement.rose .visualLayerPlate,
+.visualElement.rose .visualElementCircle {
+  stroke: rgba(232, 111, 141, 0.72);
+}
+
+.visualElement.active .visualElementRect,
+.visualElement.active .visualFormulaBox,
+.visualElement.active .visualLayerPlate,
+.visualElement.active .visualElementCircle {
+  filter: drop-shadow(0 0 10px rgba(88, 192, 140, 0.28));
+  stroke-width: 1.8;
+}
+
+.visualMatrixCell {
+  fill: #6f9cff;
+}
+
+.visualElement.green .visualMatrixCell {
+  fill: #58c08c;
+}
+
+.visualElement.amber .visualMatrixCell {
+  fill: #f2b86b;
+}
+
+.visualElement.rose .visualMatrixCell {
+  fill: #e86f8d;
+}
+
+.visualLayerPlate {
+  fill: rgba(28, 32, 39, 0.7);
+}
+
+.visualFormulaBox {
+  fill: rgba(22, 24, 29, 0.92);
+}
+
+.visualFormulaText {
+  fill: #f5f6f8;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.visualBarTrack {
+  fill: #262a32;
+}
+
+.visualBarFill {
+  fill: #58c08c;
+}
+
+.visualElement.blue .visualBarFill {
+  fill: #6f9cff;
+}
+
+.visualElement.amber .visualBarFill {
+  fill: #f2b86b;
+}
+
+.visualElement.rose .visualBarFill {
+  fill: #e86f8d;
+}
+
+.visualElementLabel,
+.visualElementDetail {
+  pointer-events: none;
+}
+
+.visualElementLabel {
+  fill: #f5f6f8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.visualElementLabel.centered {
+  text-anchor: middle;
+}
+
+.visualElementDetail {
+  fill: #9aa0aa;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.visualAnnotationLine,
+.visualBracket,
+.visualAxis,
+.visualElementArrow {
+  fill: none;
+  stroke: #6a7280;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+
+.visualElement.active .visualAnnotationLine,
+.visualElement.active .visualBracket,
+.visualElement.active .visualAxis,
+.visualElement.active .visualElementArrow {
+  stroke: #58c08c;
+  stroke-width: 1.9;
+}
+
 .visualEdge {
   fill: none;
   stroke: #3a3d46;

@@ -26,6 +26,7 @@ Last updated: 2026-04-30
 - Workspace widths and chat visibility are persisted in renderer `localStorage`.
 - Right AI Workspace Visual Lab with A/B output: validated AI-generated `VisualSpec` JSON rendered locally with React/SVG, plus AI-generated self-contained HTML/JS demos rendered only inside an iframe sandbox with CSP.
 - Visual Lab A mode now uses a local parameter-driven simulation engine, so slider changes recompute and redraw teaching visuals such as K/V cache blocks, token interleaving, transfer blocks, GPU lanes, metric cards, and flow speed.
+- Visual Lab A mode also supports declarative `visualElements`, allowing generated scenes to render richer non-flowchart diagrams such as architecture blocks, matrices, layer stacks, formulas, bars, brackets, axes, annotations, and arrows.
 - Visual Lab B mode prompt now asks for a teaching-oriented self-contained HTML/JS demo with visible controls and a recomputation loop, isolated in the existing iframe sandbox.
 - API configuration stored in renderer `localStorage`.
 - Real AI provider support:
@@ -55,9 +56,10 @@ Last updated: 2026-04-30
 2. Move API key storage from `localStorage` to a safer Electron-side storage strategy.
 3. Add caching for generated VisualSpecs, simulation states, and HTML demos per highlight/context.
 4. Add richer simulation templates beyond the current KV-cache-oriented default, especially for equations, attention, diffusion, optimization, and statistical experiments.
-5. Add visible PDF zoom controls and optional persistence for reader zoom.
-6. Add a minimal smoke-test script or Playwright check for the app shell and Visual Lab sliders.
+5. Add more A-mode visual element kinds if needed, such as heatmaps with labels, small multiples, decision trees, coordinate plots, or simple 3D projections.
+6. Add visible PDF zoom controls and optional persistence for reader zoom.
+7. Add a minimal smoke-test script or Playwright check for the app shell and Visual Lab sliders.
 
 ## Verification Snapshot
 
-`npm run build` succeeded on 2026-04-30 after adding parameter-driven Visual Lab simulations, structured SVG rendering, and sandboxed HTML/JS demos.
+`npm run build` succeeded on 2026-04-30 after expanding Visual Lab A mode with declarative visual elements, parameter-driven simulations, structured SVG rendering, and sandboxed HTML/JS demos.

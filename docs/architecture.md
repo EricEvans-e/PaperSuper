@@ -45,6 +45,7 @@ Renderer React UI
 - `apps/desktop/src/components/VisualLab.tsx`
   - Renders the right AI Workspace visualization scene.
   - Uses local structured `VisualSpec` data, SVG rendering, playback state, focused steps, and parameter sliders for A mode.
+  - Supports both legacy `nodes` / `edges` flow diagrams and richer declarative `visualElements` such as matrices, layer stacks, formulas, brackets, bars, axes, annotations, and arrows.
   - Renders self-contained AI-generated HTML/JS demos inside a sandboxed iframe for B mode.
   - Calls the existing `window.paperSuper.sendAiMessage` bridge to generate both `VisualSpec` JSON and `htmlDemo` from the newest selected PDF context item.
   - Extracts and validates model JSON before rendering; failed generation falls back to a local preview scene.
@@ -106,12 +107,14 @@ Renderer React UI
 4. `VisualLab` asks the current AI provider for strict JSON containing both `VisualSpec` and `htmlDemo` using `window.paperSuper.sendAiMessage`.
 5. The renderer extracts and validates the JSON into safe local primitives.
 6. A mode draws the scene with React/SVG instead of executing generated code.
-7. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
-8. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
-9. B mode injects the returned HTML body fragment into an iframe with `sandbox="allow-scripts"` and a restrictive CSP that disables network connections and external resources.
-10. B-mode demos own their internal controls and recomputation loop, but remain isolated from the renderer and native APIs.
-11. Playback controls advance focused explanation steps in A mode.
-12. If generation fails or JSON is invalid, the panel keeps a local preview scene and displays the error.
+7. A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
+8. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
+9. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
+10. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
+11. B mode injects the returned HTML body fragment into an iframe with `sandbox="allow-scripts"` and a restrictive CSP that disables network connections and external resources.
+12. B-mode demos own their internal controls and recomputation loop, but remain isolated from the renderer and native APIs.
+13. Playback controls advance focused explanation steps in A mode and can focus both node ids and visual element ids.
+14. If generation fails or JSON is invalid, the panel keeps a local preview scene and displays the error.
 
 ### Global UI Zoom
 
@@ -159,6 +162,7 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 - `VisualSpec`: structured visualization scene rendered locally in the right AI Workspace
 - `VisualHtmlDemo`: self-contained HTML/JS demo rendered only inside the Visual Lab iframe sandbox
 - `VisualSimulationSpec`: optional model hint for the local Visual Lab simulation engine
+- `VisualElement`: safe declarative SVG primitive for richer A-mode diagrams
 - `VisualNode`, `VisualEdge`, `VisualParameter`, and `VisualStep`: renderer-owned visual scene primitives
 
 ## Security Boundaries
@@ -176,6 +180,7 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
 - Right AI Workspace includes a Visual Lab with A/B mode switching between local SVG rendering and sandboxed HTML/JS demos.
+- A-mode local SVG rendering can combine flow nodes, edges, simulation layers, and declarative visual elements for non-flowchart diagrams.
 - Draggable vertical split handles between left/PDF and PDF/right zones.
 - Compact chat styling at narrow widths, with auto-collapse below the threshold and same-drag reopen when the pointer moves back right.
 

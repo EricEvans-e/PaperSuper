@@ -38,6 +38,7 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 - Keep global app zoom in Electron main via `webContents.setZoomFactor`; renderer may call the minimal `adjustUiZoom` preload fallback for keyboard layout compatibility.
 - Keep PDF-only zoom in the renderer/PDF reader path via `pdfScaleValue`; do not mix it with global app zoom.
 - Keep right-side structured visualization work in renderer-owned `VisualSpec` data and local React/SVG rendering.
+- A-mode `VisualSpec` can include both legacy `nodes` / `edges` and richer declarative `visualElements`; prefer adding safe SVG primitives over executing generated code.
 - Visual Lab A mode parameters should flow through `computeVisualSimulation`; sliders must visibly recompute local state, not only update numeric labels.
 - HTML/JS visual demos must stay inside the `VisualLab` iframe sandbox with CSP; do not run AI-generated HTML/JS directly in the renderer.
 - Treat AI-generated HTML/JS as untrusted teaching/demo content. It may run only in the sandboxed iframe and must not get renderer, Node, network, or file access.
@@ -98,7 +99,7 @@ The current UI is a dark IDE shell with:
 - collapsible AI chat pane on the left, toggled from the activity bar
 - PDF pane in the center
 - reserved workbench pane on the right for Paper/AI/Settings tools
-- right AI Workspace renders a compact Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, and iframe sandbox HTML demos
+- right AI Workspace renders a compact Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, declarative SVG visual elements, and iframe sandbox HTML demos
 - draggable vertical handles between the three zones
 - compact AI chat styling at narrow widths, with drag-to-collapse and same-drag reopen behavior
 

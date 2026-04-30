@@ -52,12 +52,13 @@ npm run preview
 18. Configure one AI provider and send a short prompt from the left AI chat.
 19. Open the AI activity in the right workbench and confirm the Visual Lab renders a preview scene.
 20. In A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
-21. Switch to B mode and confirm the HTML/JS sandbox preview loads in the iframe.
-22. In B mode, move the demo controls and confirm the iframe demo recomputes its diagram or animation without opening external resources.
-23. Alt-drag a paragraph/table text region, click `Generate`, and confirm the Visual Lab requests the configured AI provider and renders both the generated A-mode scene and B-mode HTML demo or a clear error fallback.
-24. Ask the AI chat to translate or explain the selected context.
-25. Confirm streaming output appears as Markdown.
-26. Run `npm run build`.
+21. In A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
+22. Switch to B mode and confirm the HTML/JS sandbox preview loads in the iframe.
+23. In B mode, move the demo controls and confirm the iframe demo recomputes its diagram or animation without opening external resources.
+24. Alt-drag a paragraph/table text region, click `Generate`, and confirm the Visual Lab requests the configured AI provider and renders both the generated A-mode scene and B-mode HTML demo or a clear error fallback.
+25. Ask the AI chat to translate or explain the selected context.
+26. Confirm streaming output appears as Markdown.
+27. Run `npm run build`.
 
 ## AI Configuration
 
@@ -128,6 +129,16 @@ Check:
 - `VisualLab` passes the current `parameterValues` into `computeVisualSimulation`.
 - `SimulationLayer` receives `simulationState` and maps it to block counts, GPU lanes, metrics, and packet speed.
 - Generated `VisualSpec.parameters` have useful ranges and non-identical `min` / `max` values.
+- If a `visualElements` item should react to a slider, confirm its `parameterId` matches one generated parameter id.
+
+### Visual Lab A mode still looks like only a flowchart
+
+Check:
+
+- The generated JSON includes `visualElements`, not only `nodes` and `edges`.
+- The `kind` value matches the passage, such as `architecture`, `matrix`, `equation-playground`, `comparison`, `geometry`, or `timeline`.
+- `visualElements.kind` values are supported: `rect`, `circle`, `text`, `formula`, `matrix`, `layer`, `bracket`, `annotation`, `bar`, `axis`, or `arrow`.
+- Element coordinates stay inside the 700 x 360 canvas.
 
 ### Visual Lab B mode looks unsafe or tries to load resources
 
