@@ -380,18 +380,33 @@ const sendOpenAiResponses = async (
           data = await send(url, {
             model: config.model,
             instructions,
-            input: conversationText(messages),
-            max_output_tokens: config.maxTokens,
+            input: structuredInput,
           });
         } catch (retryError) {
           if (!(retryError instanceof AiHttpError) || retryError.status !== 400) {
             throw retryError;
           }
 
-          data = await send(url, {
-            model: config.model,
-            input: `${instructions}\n\n${conversationText(messages)}`,
-          });
+          try {
+            data = await send(url, {
+              model: config.model,
+              instructions,
+              input: conversationText(messages),
+              max_output_tokens: config.maxTokens,
+            });
+          } catch (finalRetryError) {
+            if (
+              !(finalRetryError instanceof AiHttpError) ||
+              finalRetryError.status !== 400
+            ) {
+              throw finalRetryError;
+            }
+
+            data = await send(url, {
+              model: config.model,
+              input: `${instructions}\n\n${conversationText(messages)}`,
+            });
+          }
         }
       }
 
@@ -728,6 +743,12 @@ const streamOpenAiResponses = async (
       instructions,
       input: structuredInput,
       max_output_tokens: config.maxTokens,
+      stream: true,
+    },
+    {
+      model: config.model,
+      instructions,
+      input: structuredInput,
       stream: true,
     },
     {

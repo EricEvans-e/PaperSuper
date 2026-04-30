@@ -361,6 +361,14 @@ select:disabled {
   background: #ffffff;
 }
 
+.paneMeta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
 .paneHeader h1,
 .panelHeader h2 {
   margin: 0;
@@ -520,11 +528,13 @@ select:disabled {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   min-height: 0;
+  padding: 8px;
 }
 
 .aiChatPanel {
+  container-type: inline-size;
   min-height: 0;
-  margin: 10px 0 10px 10px;
+  margin: 8px 0 8px 8px;
   overflow: hidden;
 }
 
@@ -540,28 +550,52 @@ select:disabled {
   font-size: 11px;
 }
 
+.chatHeaderMeta {
+  min-width: 0;
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chatTitleBlock {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
 
-.chatTitleBlock svg {
+.chatTitleBlock .cardTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatStatusDot {
   flex: 0 0 auto;
-  color: #58c08c;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #58c08c;
+  box-shadow: 0 0 0 3px rgba(88, 192, 140, 0.1);
+}
+
+.chatStatusDot.active {
+  background: #6f9cff;
+  box-shadow: 0 0 0 3px rgba(111, 156, 255, 0.14);
 }
 
 .messageList {
   align-content: start;
-  margin: 8px 0;
+  margin: 6px 0;
   overflow: auto;
 }
 
 .message {
-  max-width: 96%;
-  padding: 7px 9px;
-  border-radius: 6px;
+  max-width: 100%;
+  padding: 6px 7px;
+  border-radius: 5px;
+  overflow-wrap: anywhere;
 }
 
 .message.assistant {
@@ -578,15 +612,16 @@ select:disabled {
 }
 
 .messageRole {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-size: 10.5px;
   font-weight: 800;
   opacity: 0.75;
 }
 
 .messageContent {
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .markdownBody :first-child {
@@ -654,8 +689,8 @@ select:disabled {
 
 .chatComposer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 32px;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 5px;
   align-items: end;
 }
 
@@ -676,8 +711,13 @@ select:disabled {
 }
 
 .chatComposer textarea {
-  height: 52px;
-  padding: 8px 9px;
+  height: 44px;
+  padding: 7px 8px;
+}
+
+.chatComposer .primaryIconButton {
+  width: 28px;
+  height: 28px;
 }
 
 .paperCard,
@@ -804,12 +844,80 @@ select.textInput {
 
 .composerHint {
   margin-top: 6px;
+  overflow: hidden;
   color: #9aa0aa;
   font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .composerHint.error {
   color: #ff9b8d;
+}
+
+@container (max-width: 240px) {
+  .chatHeaderMeta {
+    max-width: 58px;
+  }
+
+  .messageList {
+    gap: 5px;
+    margin: 5px 0;
+  }
+
+  .message {
+    padding: 6px;
+  }
+
+  .messageRole {
+    display: none;
+  }
+
+  .markdownBody p,
+  .markdownBody ul,
+  .markdownBody ol,
+  .markdownBody pre,
+  .markdownBody table,
+  .markdownBody blockquote {
+    margin: 0.45em 0;
+  }
+
+  .markdownBody pre {
+    padding: 7px;
+  }
+
+  .chatComposer {
+    grid-template-columns: minmax(0, 1fr) 26px;
+  }
+
+  .chatComposer textarea {
+    height: 40px;
+    padding: 6px 7px;
+  }
+
+  .chatComposer .primaryIconButton {
+    width: 26px;
+    height: 26px;
+  }
+
+  .composerHint {
+    margin-top: 5px;
+    font-size: 10.5px;
+  }
+}
+
+@container (max-width: 200px) {
+  .chatHeaderMeta {
+    display: none;
+  }
+
+  .chatComposer textarea {
+    height: 38px;
+  }
+
+  .composerHint {
+    display: none;
+  }
 }
 
 .selectionTip {
@@ -847,6 +955,117 @@ select.textInput {
 
 .Highlight__popup {
   color: #f5f6f8;
+}
+
+.highlightActionMenu,
+.translationPopup {
+  position: absolute;
+  z-index: 20;
+  color: #f5f6f8;
+  background: #18191d;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.34);
+}
+
+.highlightActionMenu {
+  width: 150px;
+  padding: 5px;
+  border: 1px solid #30333a;
+  border-radius: 6px;
+}
+
+.highlightActionButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 5px;
+  color: #e8eaed;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.highlightActionButton:hover {
+  background: #25272d;
+}
+
+.translationPopup {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(360px, calc(100% - 16px));
+  border: 1px solid #30333a;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.translationPopupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 0 8px 0 10px;
+  border-bottom: 1px solid #2a2d34;
+  background: #1d1e23;
+}
+
+.translationPopupTitle,
+.translationPopupActions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.translationPopupTitle {
+  min-width: 0;
+  color: #f5f6f8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.translationPopupActions {
+  flex: 0 0 auto;
+}
+
+.translationPopupActions .textIconButton {
+  color: #a8adb7;
+}
+
+.translationScroll {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.translationSource {
+  padding: 8px 10px;
+  border-bottom: 1px solid #292b31;
+  color: #b8bec8;
+  font-size: 11px;
+  line-height: 1.45;
+  background: #15161a;
+}
+
+.translationContent {
+  padding: 10px;
+  color: #e8eaed;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.translationError {
+  color: #ff9b8d;
+}
+
+.spinIcon {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 1180px) {

@@ -35,18 +35,24 @@ npm run preview
 1. Run `npm run dev`.
 2. Confirm the Electron window opens.
 3. Confirm the sample arXiv PDF renders.
-4. Click text in the PDF and confirm nearby context is auto-highlighted and added to AI context.
+4. Click text in the PDF and confirm only the nearby sentence is auto-highlighted and added to AI context.
 5. Click the same highlighted context again and confirm it is removed from the PDF.
 6. Add several context highlights, click blank PDF space, and confirm all AI context highlights are cleared.
-7. Select text or draw a visual region and verify it is auto-highlighted.
-8. Open a local PDF with the title-bar Open PDF button.
-9. Switch between Paper, AI, and Settings activities.
-10. Toggle the left AI chat from the activity bar and confirm the PDF pane expands/collapses cleanly.
-11. Drag both vertical split handles and confirm the left chat, center PDF, and right workbench widths adjust without overlap.
-12. Refresh/restart and confirm the adjusted workspace widths are retained.
-13. Configure one AI provider and send a short prompt from the left AI chat.
-14. Confirm streaming output appears as Markdown.
-15. Run `npm run build`.
+7. Select text or Alt-drag a text region and verify it is auto-highlighted as text, counted as text AI context, and does not leave a rectangular area box.
+8. Create several adjacent AI context highlights, including a wrapped line or a small visual gap, right-click one of them, choose `翻译`, and confirm the floating Markdown translation panel includes the adjacent highlighted sentences.
+9. Open a local PDF with the title-bar Open PDF button.
+10. Switch between Paper, AI, and Settings activities.
+11. Toggle the left AI chat from the activity bar and confirm the PDF pane expands/collapses cleanly.
+12. Drag the left split handle to a narrow width and confirm the chat becomes compact, auto-collapses below the threshold, and reopens if the still-held pointer is dragged back right.
+13. Drag both vertical split handles and confirm the left chat, center PDF, and right workbench widths adjust without overlap.
+14. Refresh/restart and confirm the adjusted workspace widths are retained.
+15. Press `Ctrl/Cmd + +` or `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, and `Ctrl/Cmd + 0`; confirm the whole app zooms and reset works.
+16. Hold `Ctrl/Cmd` and scroll the mouse wheel inside the PDF pane; confirm only the PDF view zooms, the header percentage updates, and existing highlights stay aligned with the selected text or region.
+17. Restart the app and confirm the last non-reset global zoom factor is retained.
+18. Configure one AI provider and send a short prompt from the left AI chat.
+19. Alt-drag a paragraph/table text region and ask the AI to translate or explain it.
+20. Confirm streaming output appears as Markdown.
+21. Run `npm run build`.
 
 ## AI Configuration
 
@@ -88,6 +94,14 @@ Check:
 - `paperSuper:aiStreamEvent` is being sent from `apps/desktop/electron/main.ts`.
 - The provider returns SSE chunks matching the parser in `apps/desktop/electron/ai.ts`.
 
+### Highlight translation fails
+
+Check:
+
+- The Settings activity has a valid provider, API base, key, model, and token cap.
+- The highlight was created as an `AI Context` text highlight.
+- The PDF text extraction may still be running immediately after opening a large file; translation still works, but with less paper context until extraction finishes.
+
 ### PDF does not load
 
 Check:
@@ -99,6 +113,10 @@ Check:
 ### AI chat area is hidden
 
 The chat lives in the collapsible left pane. Use the chat button in the far-left activity bar to show or hide it. Drag the vertical split handles to rebalance the three zones. If it still disappears, check the `threeZoneWorkspace`, `workspaceSplitHandle`, and `aiChatPanel` styles.
+
+### UI zoom is wrong
+
+Use `Ctrl/Cmd + 0` to reset the global zoom to 100%. The persisted setting lives in Electron `userData/papersuper-settings.json` under `uiZoomFactor`.
 
 ## Safe Editing Notes
 

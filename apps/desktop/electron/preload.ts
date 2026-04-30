@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("paperSuper", {
   openPdfFile: () => ipcRenderer.invoke("paperSuper:openPdfFile"),
+  adjustUiZoom: (action: unknown) =>
+    ipcRenderer.invoke("paperSuper:adjustUiZoom", action),
   sendAiMessage: (request: unknown) =>
     ipcRenderer.invoke("paperSuper:sendAiMessage", request),
   sendAiMessageStream: (requestId: string, request: unknown) =>

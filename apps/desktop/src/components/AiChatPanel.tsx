@@ -1,4 +1,4 @@
-import { Bot, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -31,6 +31,7 @@ export function AiChatPanel({
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const activeRequestIdRef = useRef<string | null>(null);
+  const contextLabel = `${contextItems.length} ctx`;
 
   useEffect(() => {
     const unsubscribe = window.paperSuper?.onAiStreamEvent((event) => {
@@ -139,14 +140,14 @@ export function AiChatPanel({
   return (
     <section className="card chatCard aiChatPanel">
       <div className="chatHeader">
-        <div className="chatTitleBlock">
-          <Bot size={14} />
-          <div>
-            <div className="cardTitle">AI Chat</div>
-            <div className="cardMeta">{modelConfig.model || "No model configured"}</div>
-          </div>
+        <div
+          className="chatTitleBlock"
+          title={modelConfig.model || "No model configured"}
+        >
+          <span className={isSending ? "chatStatusDot active" : "chatStatusDot"} />
+          <div className="cardTitle">AI</div>
         </div>
-        <span>{isSending ? "Streaming" : "Ready"}</span>
+        <span className="chatHeaderMeta">{isSending ? "Streaming" : contextLabel}</span>
       </div>
 
       <div className="messageList">
@@ -197,10 +198,10 @@ export function AiChatPanel({
 
       <div className={sendError ? "composerHint error" : "composerHint"}>
         {isSending
-          ? "Requesting model..."
+          ? "Streaming response..."
           : sendError
             ? sendError
-            : `${contextItems.length} context item${contextItems.length === 1 ? "" : "s"}`}
+            : `${modelConfig.model || "No model"} / ${contextLabel}`}
       </div>
     </section>
   );

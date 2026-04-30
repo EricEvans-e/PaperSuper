@@ -23,8 +23,9 @@ Renderer React UI
   - Creates the desktop window.
   - Registers `paperSuper:openPdfFile`.
   - Registers non-streaming and streaming AI IPC handlers.
+  - Owns global UI zoom shortcuts and persists the zoom factor in Electron `userData`.
 - `apps/desktop/electron/preload.ts`
-  - Exposes `openPdfFile`, `sendAiMessage`, `sendAiMessageStream`, and `onAiStreamEvent`.
+  - Exposes `openPdfFile`, `adjustUiZoom`, `sendAiMessage`, `sendAiMessageStream`, and `onAiStreamEvent`.
 - `apps/desktop/electron/ai.ts`
   - Validates model config.
   - Builds the research assistant system prompt.
@@ -37,7 +38,8 @@ Renderer React UI
 - `apps/desktop/src/components/PdfReaderPane.tsx`
   - Loads PDF.js worker.
   - Wraps `react-pdf-highlighter`.
-  - Handles text/area highlights, click-to-context capture, and selected-context capture.
+  - Handles text highlights, sentence-level click-to-context capture, and selected-context capture.
+  - Extracts PDF page text in the background for contextual highlight translation.
 - `apps/desktop/src/components/Workbench.tsx`
   - Renders Paper, AI, and Settings in the right reserved workbench area.
 - `apps/desktop/src/components/AiChatPanel.tsx`
@@ -55,13 +57,26 @@ Renderer React UI
 
 ### Add PDF Content To AI Context
 
-1. User clicks text, selects text, or draws a visual region in the PDF.
+1. User clicks text, selects text, or Alt-drags a text region in the PDF.
 2. `PdfReaderPane` creates an `AI Context` highlight.
 3. `App` stores an `AiContextItem` with the linked highlight id.
 4. The right workbench does not render a context list.
-5. AI chat includes the stored context text in later prompts.
-6. Clicking an `AI Context` highlight again removes only that linked context item.
-7. Clicking blank space inside the PDF viewer clears all `AI Context` highlights and linked context items.
+5. Single-click capture uses the clicked caret position and nearby sentence boundaries, capped by a small character window.
+6. AI chat includes stored text context in later prompts. Alt-dragged regions use a temporary rectangle to extract matching text-layer spans, then store normal text highlight rects instead of a retained area box.
+7. No screenshots are sent to the model for Alt-drag context.
+8. Clicking an `AI Context` highlight again removes only that linked context item.
+9. Clicking blank space inside the PDF viewer clears all `AI Context` highlights and linked context items.
+
+### Translate Highlight
+
+1. User right-clicks an `AI Context` text highlight.
+2. `PdfReaderPane` opens a compact action menu with `翻译`.
+3. `PdfReaderPane` dynamically merges same-page, same-column, visually adjacent `AI Context` text highlights around the right-clicked highlight.
+4. Merge adjacency is calculated from each highlight's line-level normalized rects, allowing small whitespace gaps, wrapped lines, and slight text-layer offsets without merging across clearly different columns.
+5. When translation starts, `PdfReaderPane` builds a focused translation prompt from the merged highlight text, current paper title, existing selected context, and background-extracted PDF page text.
+6. Renderer calls `window.paperSuper.sendAiMessage` with the current `ModelConfig`; no chat history is appended.
+7. The result renders as Markdown in a floating panel near the PDF highlight with close and regenerate controls.
+8. Translation is non-streaming in the current version; the existing streaming path remains reserved for the left AI chat.
 
 ### Streaming AI Chat
 
@@ -72,6 +87,27 @@ Renderer React UI
 5. `ai.ts` parses provider SSE events and emits text deltas.
 6. Main process forwards deltas through `paperSuper:aiStreamEvent`.
 7. Renderer appends deltas into the assistant message.
+
+### Global UI Zoom
+
+1. Main process listens to `before-input-event` on the window web contents.
+2. `Ctrl/Cmd + +` or `Ctrl/Cmd + =` increases the Electron `webContents` zoom factor by 0.1.
+3. `Ctrl/Cmd + -` decreases the zoom factor by 0.1.
+4. `Ctrl/Cmd + 0` resets the zoom factor to 1.0.
+5. The zoom factor is clamped from 0.75 to 1.5 and persisted to `userData/papersuper-settings.json`.
+6. Renderer also captures the same shortcuts and calls `window.paperSuper.adjustUiZoom` as a keyboard-layout fallback.
+7. This is app-level UI zoom and is intentionally separate from PDF reader zoom.
+
+### PDF Reader Zoom
+
+1. `PdfReaderPane` owns a local `pdfScale` state.
+2. Ctrl/Cmd + mouse wheel inside `.pdfSurface` prevents the default browser zoom path.
+3. Wheel-up increases `pdfScale` by 0.1; wheel-down decreases it by 0.1.
+4. The PDF reader zoom is clamped from 0.5 to 2.5.
+5. `PdfReaderPane` passes the numeric scale as `pdfScaleValue` to `PdfHighlighter`.
+6. `PdfHighlighter` reapplies `viewer.currentScaleValue` when `pdfScaleValue` changes so PDF.js rerenders the pages.
+7. `PdfHighlighter` queues highlight-layer refreshes on `pdfScaleValue` changes plus PDF.js `scalechanging`, `pagerendered`, and `textlayerrendered` events, keeping existing highlights aligned after scaling.
+8. The PDF zoom label is displayed in the PDF pane header and is not persisted yet.
 
 ## Provider Support
 
@@ -111,5 +147,6 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
 - Draggable vertical split handles between left/PDF and PDF/right zones.
+- Compact chat styling at narrow widths, with auto-collapse below the threshold and same-drag reopen when the pointer moves back right.
 
 The AI chat has streaming and Markdown support. As of 2026-04-30, it is implemented as a collapsible and manually resizable left pane controlled by the activity bar.

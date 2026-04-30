@@ -8,10 +8,15 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
 - PDF reader based on PDF.js and `react-pdf-highlighter`.
 - Default sample PDF: `Attention Is All You Need` from arXiv.
 - Local PDF open flow through Electron IPC.
-- Text highlights, area highlights, comments, and click-to-jump annotation list.
-- Clicked text, selected text, and selected visual regions are automatically saved as AI context.
+- Text highlights, comments, and click-to-jump annotation list.
+- Single-clicked text, selected text, and Alt-dragged text regions are automatically saved as AI context.
+- Single-click context is limited to the nearby sentence instead of a broad multi-line block.
+- Alt-dragged regions use a temporary rectangle only while dragging, then extract matching PDF text and save it as normal text highlights without sending screenshots to the model.
 - Auto-saved context is highlighted in the PDF and used silently by the AI chat.
 - Clicking the same AI context highlight again removes it from the PDF and the AI context state.
+- Right-clicking an AI context highlight opens a translation action; adjacent same-page highlights are merged for translation and shown in a floating Markdown panel near the PDF.
+- Translation merging uses line-level highlight geometry, so small gaps, wrapped lines, and slight PDF text-layer offsets can still be treated as one selected passage.
+- Highlight translation uses the configured AI provider and includes extracted paper text context for terminology consistency.
 - Clicking any blank space inside the PDF viewer clears all auto-saved AI context highlights.
 - AI configuration stored in renderer `localStorage`.
 - Supported AI provider formats:
@@ -22,6 +27,9 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
 - Streaming AI output is wired through Electron IPC events.
 - Three-zone workspace: collapsible left AI chat, central PDF reader, and right interaction/reserved panel.
 - Left AI chat width and right reserved panel width can be adjusted manually and are persisted locally.
+- The left AI chat uses a compact layout at narrow widths, auto-collapses below the threshold, and can reopen during the same drag if pulled back right.
+- Global UI zoom uses `Ctrl/Cmd + +` or `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, and `Ctrl/Cmd + 0`, with the zoom factor persisted by Electron.
+- PDF reader zoom uses `Ctrl/Cmd + mouse wheel` inside the paper pane, affects only the PDF view, and keeps existing highlights aligned after scaling.
 
 ## Setup
 

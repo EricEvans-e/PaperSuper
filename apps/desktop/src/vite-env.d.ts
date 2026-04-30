@@ -13,6 +13,7 @@ interface OpenPdfFileResult {
 
 interface PaperSuperBridge {
   openPdfFile: () => Promise<OpenPdfFileResult | null>;
+  adjustUiZoom: (action: "in" | "out" | "reset") => Promise<number>;
   sendAiMessage: (
     request: AiCompletionRequest,
   ) => Promise<AiCompletionResponse>;

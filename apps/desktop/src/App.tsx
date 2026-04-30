@@ -20,7 +20,9 @@ const STORAGE_WORKSPACE_LAYOUT = "papersuper:workspace-layout";
 
 const DEFAULT_CHAT_WIDTH = 340;
 const DEFAULT_RIGHT_WIDTH = 340;
-const MIN_CHAT_WIDTH = 220;
+const MIN_CHAT_WIDTH = 180;
+const CHAT_AUTO_COLLAPSE_WIDTH = 150;
+const CHAT_REOPEN_WIDTH = MIN_CHAT_WIDTH;
 const MAX_CHAT_WIDTH = 820;
 const MIN_PDF_WIDTH = 320;
 const MIN_RIGHT_WIDTH = 220;
@@ -109,7 +111,7 @@ export function App() {
     {
       id: makeId(),
       role: "assistant",
-      content: "PaperSuper is ready. Select PDF text to attach context, then ask in the chat panel.",
+      content: "PaperSuper is ready. Click, select, or Alt-drag PDF text to attach context, then ask in the chat panel.",
       createdAt: new Date().toISOString(),
       isLocal: true,
     },
@@ -144,6 +146,50 @@ export function App() {
     },
     [],
   );
+
+  useEffect(() => {
+    const handleZoomShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const code = event.code;
+      const isZoomIn =
+        key === "+" ||
+        key === "=" ||
+        key === "plus" ||
+        code === "Equal" ||
+        code === "NumpadAdd";
+      const isZoomOut =
+        key === "-" || code === "Minus" || code === "NumpadSubtract";
+      const isZoomReset = key === "0" || code === "Digit0" || code === "Numpad0";
+
+      if (!isZoomIn && !isZoomOut && !isZoomReset) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (isZoomIn) {
+        void window.paperSuper?.adjustUiZoom("in");
+        return;
+      }
+
+      if (isZoomOut) {
+        void window.paperSuper?.adjustUiZoom("out");
+        return;
+      }
+
+      void window.paperSuper?.adjustUiZoom("reset");
+    };
+
+    window.addEventListener("keydown", handleZoomShortcut, true);
+    return () => {
+      window.removeEventListener("keydown", handleZoomShortcut, true);
+    };
+  }, []);
 
   const openPdfFile = async () => {
     setOpenError(null);
@@ -182,15 +228,13 @@ export function App() {
 
   const addContextItem = ({
     text,
-    image,
     highlightId,
     pageNumber,
-  }: Pick<AiContextItem, "text" | "image" | "highlightId" | "pageNumber">) => {
+  }: Pick<AiContextItem, "text" | "highlightId" | "pageNumber">) => {
     setContextItems((items) => [
       {
         id: makeId(),
         text,
-        image,
         highlightId,
         pageNumber,
         createdAt: new Date().toISOString(),
@@ -247,9 +291,23 @@ export function App() {
     const containerWidth = container.getBoundingClientRect().width;
     const maxWidth =
       containerWidth - rightWidth - MIN_PDF_WIDTH - SPLIT_HANDLE_WIDTH * 2;
+    let isCollapsedDuringDrag = false;
 
     const move = (pointerEvent: PointerEvent) => {
       const nextWidth = startWidth + pointerEvent.clientX - startX;
+      if (nextWidth <= CHAT_AUTO_COLLAPSE_WIDTH) {
+        isCollapsedDuringDrag = true;
+        setChatWidth(MIN_CHAT_WIDTH);
+        setIsChatOpen(false);
+        return;
+      }
+
+      if (isCollapsedDuringDrag && nextWidth < CHAT_REOPEN_WIDTH) {
+        return;
+      }
+
+      isCollapsedDuringDrag = false;
+      setIsChatOpen(true);
       setChatWidth(clamp(nextWidth, MIN_CHAT_WIDTH, Math.min(MAX_CHAT_WIDTH, maxWidth)));
     };
 
@@ -339,7 +397,9 @@ export function App() {
           <PdfReaderPane
             paper={paper}
             pdfUrl={pdfUrl}
+            contextItems={contextItems}
             highlights={highlights}
+            modelConfig={modelConfig}
             onHighlightsChange={setHighlights}
             onAddContext={addContextItem}
             onRemoveContextHighlight={removeContextHighlight}

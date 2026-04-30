@@ -21,7 +21,6 @@ export interface ModelConfig {
 export interface AiContextItem {
   id: string;
   text: string;
-  image?: string;
   highlightId?: string;
   pageNumber?: number;
   createdAt: string;

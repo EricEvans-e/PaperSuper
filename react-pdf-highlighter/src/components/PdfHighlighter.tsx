@@ -12,6 +12,7 @@ import { scaledToViewport, viewportToScaled } from "../lib/coordinates";
 import { getAreaAsPNG } from "../lib/get-area-as-png";
 import { getBoundingRect } from "../lib/get-bounding-rect";
 import { getClientRects } from "../lib/get-client-rects";
+import { optimizeClientRects } from "../lib/optimize-client-rects";
 import {
   findOrCreateContainerLayer,
   getPageFromElement,
@@ -81,6 +82,129 @@ interface Props<T_HT> {
 
 const EMPTY_ID = "empty-id";
 
+const textSegmentNeedsNoSpace = (
+  previousText: string,
+  nextText: string,
+  gap: number,
+) => {
+  const previousChar = previousText.trim().slice(-1);
+  const nextChar = nextText.trim().charAt(0);
+  const cjkPattern = /[\u3400-\u9fff\uf900-\ufaff]/;
+  const closingPunctuationPattern =
+    /[,.!?;:%\u3001\u3002\uff0c\uff01\uff1f\uff1b\uff1a\uff09)\]}]/;
+  const openingPunctuationPattern = /[\uff08([{]/;
+
+  return (
+    gap <= 2 ||
+    (cjkPattern.test(previousChar) && cjkPattern.test(nextChar)) ||
+    closingPunctuationPattern.test(nextChar) ||
+    openingPunctuationPattern.test(previousChar)
+  );
+};
+
+const appendTextSegment = (
+  currentLine: string,
+  nextText: string,
+  gap: number,
+) => {
+  const cleanText = nextText.replace(/\s+/g, " ").trim();
+
+  if (!cleanText) {
+    return currentLine;
+  }
+
+  if (!currentLine) {
+    return cleanText;
+  }
+
+  if (/[-\u2010\u2011\u2012\u2013\u2014]\s*$/.test(currentLine)) {
+    return `${currentLine.replace(
+      /[-\u2010\u2011\u2012\u2013\u2014]\s*$/,
+      "",
+    )}${cleanText}`;
+  }
+
+  if (textSegmentNeedsNoSpace(currentLine, cleanText, gap)) {
+    return `${currentLine}${cleanText}`;
+  }
+
+  return `${currentLine} ${cleanText}`;
+};
+
+const rectsIntersect = (a: LTWH, b: LTWH) => {
+  const overlapWidth =
+    Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left);
+  const overlapHeight =
+    Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top);
+
+  return overlapWidth > 0 && overlapHeight > 0;
+};
+
+const extractTextSelectionFromArea = (pageNode: HTMLElement, area: LTWHP) => {
+  const pageClientRect = pageNode.getBoundingClientRect();
+  const spans = Array.from(pageNode.querySelectorAll(".textLayer span"))
+    .filter(isHTMLElement)
+    .map((span) => {
+      const text = span.textContent?.replace(/\s+/g, " ").trim();
+      const rect = span.getBoundingClientRect();
+      const localRect: LTWHP = {
+        left: rect.left - pageClientRect.left,
+        top: rect.top - pageClientRect.top,
+        width: rect.width,
+        height: rect.height,
+        pageNumber: area.pageNumber,
+      };
+
+      return text && rectsIntersect(localRect, area)
+        ? { text, rect: localRect }
+        : null;
+    })
+    .filter(Boolean) as Array<{ text: string; rect: LTWHP }>;
+
+  if (spans.length === 0) {
+    return { text: "", rects: [] };
+  }
+
+  const lines: Array<Array<{ text: string; rect: LTWHP }>> = [];
+
+  for (const span of spans.sort((a, b) => a.rect.top - b.rect.top)) {
+    const centerY = span.rect.top + span.rect.height / 2;
+    const line = lines.find((existingLine) => {
+      const firstRect = existingLine[0].rect;
+      const firstCenterY = firstRect.top + firstRect.height / 2;
+      return (
+        Math.abs(firstCenterY - centerY) <=
+        Math.max(4, span.rect.height * 0.5)
+      );
+    });
+
+    if (line) {
+      line.push(span);
+    } else {
+      lines.push([span]);
+    }
+  }
+
+  const text = lines
+    .map((line) => {
+      let previousRight = 0;
+      return line
+        .sort((a, b) => a.rect.left - b.rect.left)
+        .reduce((lineText, span, index) => {
+          const gap = index === 0 ? 0 : span.rect.left - previousRight;
+          previousRight = span.rect.left + span.rect.width;
+          return appendTextSegment(lineText, span.text, gap);
+        }, "");
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    text,
+    rects: optimizeClientRects(spans.map(({ rect }) => rect)),
+  };
+};
+
 export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
   Props<T_HT>,
   State<T_HT>
@@ -108,6 +232,7 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
   highlightRoots: {
     [page: number]: { reactRoot: Root; container: Element };
   } = {};
+  highlightRenderFrame: number | null = null;
   unsubscribe = () => {};
 
   constructor(props: Props<T_HT>) {
@@ -130,6 +255,8 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
     if (this.containerNode) {
       const { ownerDocument: doc } = this.containerNode;
       eventBus.on("textlayerrendered", this.onTextLayerRendered);
+      eventBus.on("scalechanging", this.onScaleChanging);
+      eventBus.on("pagerendered", this.onPageRendered);
       eventBus.on("pagesinit", this.onDocumentReady);
       doc.addEventListener("selectionchange", this.onSelectionChange);
       doc.addEventListener("keydown", this.handleKeyDown);
@@ -139,6 +266,8 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
       this.unsubscribe = () => {
         eventBus.off("pagesinit", this.onDocumentReady);
         eventBus.off("textlayerrendered", this.onTextLayerRendered);
+        eventBus.off("scalechanging", this.onScaleChanging);
+        eventBus.off("pagerendered", this.onPageRendered);
         doc.removeEventListener("selectionchange", this.onSelectionChange);
         doc.removeEventListener("keydown", this.handleKeyDown);
         doc.defaultView?.removeEventListener(
@@ -154,6 +283,9 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
     if (prevProps.pdfDocument !== this.props.pdfDocument) {
       this.init();
       return;
+    }
+    if (prevProps.pdfScaleValue !== this.props.pdfScaleValue) {
+      this.handleScaleValue();
     }
     if (prevProps.highlights !== this.props.highlights) {
       this.renderHighlightLayers();
@@ -194,6 +326,12 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
   }
 
   componentWillUnmount() {
+    if (this.highlightRenderFrame !== null) {
+      this.containerNode?.ownerDocument.defaultView?.cancelAnimationFrame(
+        this.highlightRenderFrame,
+      );
+      this.highlightRenderFrame = null;
+    }
     this.unsubscribe();
   }
 
@@ -372,7 +510,15 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
   };
 
   onTextLayerRendered = () => {
-    this.renderHighlightLayers();
+    this.queueRenderHighlightLayers();
+  };
+
+  onScaleChanging = () => {
+    this.queueRenderHighlightLayers();
+  };
+
+  onPageRendered = () => {
+    this.queueRenderHighlightLayers();
   };
 
   scrollTo = (highlight: T_HT) => {
@@ -549,6 +695,7 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
   handleScaleValue = () => {
     if (this.viewer) {
       this.viewer.currentScaleValue = this.props.pdfScaleValue; //"page-width";
+      this.queueRenderHighlightLayers();
     }
   };
 
@@ -593,43 +740,36 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
                   pageNumber: page.number,
                 };
 
+                const { text, rects } = extractTextSelectionFromArea(
+                  page.node,
+                  pageBoundingRect,
+                );
+
+                if (!text || rects.length === 0) {
+                  resetSelection();
+                  return;
+                }
+
                 const viewportPosition = {
-                  boundingRect: pageBoundingRect,
-                  rects: [],
+                  boundingRect: getBoundingRect(rects),
+                  rects,
                   pageNumber: page.number,
                 };
 
                 const scaledPosition =
                   this.viewportPositionToScaled(viewportPosition);
 
-                const image = this.screenshot(
-                  pageBoundingRect,
-                  pageBoundingRect.pageNumber,
-                );
-
                 this.setTip(
                   viewportPosition,
                   onSelectionFinished(
                     scaledPosition,
-                    { image },
+                    { text },
                     () => this.hideTipAndSelection(),
-                    () => {
-                      console.log("setting ghost highlight", scaledPosition);
-                      this.setState(
-                        {
-                          ghostHighlight: {
-                            position: scaledPosition,
-                            content: { image },
-                          },
-                        },
-                        () => {
-                          resetSelection();
-                          this.renderHighlightLayers();
-                        },
-                      );
-                    },
+                    resetSelection,
                   ),
                 );
+
+                resetSelection();
               }}
             />
           ) : null}
@@ -657,6 +797,23 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
         }
       }
     }
+  }
+
+  private queueRenderHighlightLayers() {
+    if (this.highlightRenderFrame !== null) {
+      return;
+    }
+
+    const view = this.containerNode?.ownerDocument.defaultView;
+    if (!view) {
+      this.renderHighlightLayers();
+      return;
+    }
+
+    this.highlightRenderFrame = view.requestAnimationFrame(() => {
+      this.highlightRenderFrame = null;
+      this.renderHighlightLayers();
+    });
   }
 
   private renderHighlightLayer(root: Root, pageNumber: number) {

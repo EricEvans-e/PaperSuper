@@ -7,6 +7,7 @@ interface Props {
     rects: Array<LTWHP>;
   };
   onClick?: (event: React.MouseEvent) => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
   onMouseDown?: (event: React.MouseEvent) => void;
   onMouseOver?: () => void;
   onMouseOut?: () => void;
@@ -20,6 +21,7 @@ interface Props {
 export function Highlight({
   position,
   onClick,
+  onContextMenu,
   onMouseDown,
   onMouseOver,
   onMouseOut,
@@ -49,6 +51,7 @@ export function Highlight({
             onMouseDown={onMouseDown}
             onMouseOver={onMouseOver}
             onMouseOut={onMouseOut}
+            onContextMenu={onContextMenu}
             onClick={onClick}
             // biome-ignore lint/suspicious/noArrayIndexKey: We can use position hash at some point in future
             key={index}
