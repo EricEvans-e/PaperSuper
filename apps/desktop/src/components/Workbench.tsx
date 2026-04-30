@@ -145,7 +145,7 @@ function PaperPanel({
           <strong>{highlights.length}</strong>
         </div>
         <button type="button" className="primaryButton wide" onClick={onOpenPdf}>
-          <FileText size={16} />
+          <FileText size={14} />
           <span>Open PDF</span>
         </button>
       </div>
@@ -173,14 +173,14 @@ function AiPanel({
 
       <section className="summaryGrid">
         <div className="summaryCard">
-          <Sparkle size={16} />
+          <Sparkle size={14} />
           <div>
             <strong>Current Paper</strong>
             <span>{paper.title}</span>
           </div>
         </div>
         <div className="summaryCard">
-          <ChevronRight size={16} />
+          <ChevronRight size={14} />
           <div>
             <strong>Provider</strong>
             <span>{providerLabel(modelConfig.provider)}</span>
@@ -357,7 +357,7 @@ function PanelHeader({
     <div className="panelHeader">
       <div className="panelTitleBlock">
         <div className="panelIcon">
-          <Icon size={18} />
+          <Icon size={15} />
         </div>
         <div>
           <div className="sectionEyebrow">{eyebrow}</div>

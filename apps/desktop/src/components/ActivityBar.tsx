@@ -35,7 +35,7 @@ export function ActivityBar({
             aria-label={label}
             onClick={() => onChange(id)}
           >
-            <Icon size={21} strokeWidth={1.9} />
+            <Icon size={17} strokeWidth={1.9} />
           </button>
         ))}
       </div>

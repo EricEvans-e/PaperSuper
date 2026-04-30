@@ -140,13 +140,13 @@ export function AiChatPanel({
     <section className="card chatCard rightChatPanel">
       <div className="chatHeader">
         <div className="chatTitleBlock">
-          <Bot size={16} />
+          <Bot size={14} />
           <div>
             <div className="cardTitle">AI Chat</div>
             <div className="cardMeta">{modelConfig.model || "No model configured"}</div>
           </div>
         </div>
-        <span>{isSending ? "Streaming" : "Markdown"}</span>
+        <span>{isSending ? "Streaming" : "Ready"}</span>
       </div>
 
       <div className="messageList">
@@ -191,7 +191,7 @@ export function AiChatPanel({
           onClick={submitMessage}
           aria-label="Send message"
         >
-          <Send size={17} />
+          <Send size={15} />
         </button>
       </div>
 
@@ -200,7 +200,7 @@ export function AiChatPanel({
           ? "Requesting model..."
           : sendError
             ? sendError
-            : "Ctrl/Command + Enter to send"}
+            : `${contextItems.length} context item${contextItems.length === 1 ? "" : "s"}`}
       </div>
     </section>
   );

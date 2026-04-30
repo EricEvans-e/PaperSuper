@@ -12,7 +12,7 @@ export function TitleBar({ paper, onOpenPdf, openError }: TitleBarProps) {
     <header className="titleBar">
       <div className="brandCluster">
         <div className="brandLogo">
-          <Sparkles size={18} />
+          <Sparkles size={14} />
         </div>
         <div>
           <div className="brandName">PaperSuper</div>
@@ -28,7 +28,7 @@ export function TitleBar({ paper, onOpenPdf, openError }: TitleBarProps) {
       <div className="topActions">
         {openError ? <span className="topError">{openError}</span> : null}
         <button type="button" className="primaryButton" onClick={onOpenPdf}>
-          <FolderOpen size={17} />
+          <FolderOpen size={15} />
           <span>打开 PDF</span>
         </button>
       </div>
