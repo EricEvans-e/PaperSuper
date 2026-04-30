@@ -6,14 +6,17 @@ import {
 import type { IHighlight } from "../pdf-highlighter";
 import type {
   ActivityId,
+  AiContextItem,
   AiProvider,
   ModelConfig,
   PaperDocument,
 } from "../types";
 import { formatTime } from "../utils";
+import { VisualLab } from "./VisualLab";
 
 interface WorkbenchProps {
   activity: ActivityId;
+  contextItems: AiContextItem[];
   paper: PaperDocument;
   highlights: IHighlight[];
   modelConfig: ModelConfig;
@@ -27,6 +30,7 @@ const jumpToHighlight = (highlight: IHighlight) => {
 
 export function Workbench({
   activity,
+  contextItems,
   paper,
   highlights,
   modelConfig,
@@ -53,7 +57,13 @@ export function Workbench({
       );
     }
 
-    return <AiPanel modelConfig={modelConfig} />;
+    return (
+      <AiPanel
+        contextItems={contextItems}
+        modelConfig={modelConfig}
+        paper={paper}
+      />
+    );
   };
 
   return (
@@ -93,15 +103,22 @@ function PaperPanel({
 }
 
 function AiPanel({
+  contextItems,
   modelConfig,
-}: Pick<WorkbenchProps, "modelConfig">) {
+  paper,
+}: Pick<WorkbenchProps, "contextItems" | "modelConfig" | "paper">) {
   return (
-    <aside className="workbenchPanel">
+    <aside className="workbenchPanel aiWorkspacePanel">
       <PanelHeader
         eyebrow="AI Cockpit"
-        title="AI Workspace"
+        title="Visual Lab"
         icon={Bot}
         badge={modelConfig.model || "No model"}
+      />
+      <VisualLab
+        contextItems={contextItems}
+        modelConfig={modelConfig}
+        paper={paper}
       />
     </aside>
   );

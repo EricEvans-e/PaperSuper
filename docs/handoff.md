@@ -24,6 +24,7 @@ Last updated: 2026-04-30
 - Three-zone workspace with collapsible and resizable left AI chat, center PDF reader, and resizable right reserved workbench.
 - Left AI chat has compact narrow-width styling, auto-collapses when dragged below the threshold, and can reopen during the same drag when pulled back right.
 - Workspace widths and chat visibility are persisted in renderer `localStorage`.
+- Right AI Workspace Visual Lab with A/B output: validated AI-generated `VisualSpec` JSON rendered locally with React/SVG, plus AI-generated self-contained HTML/JS demos rendered only inside an iframe sandbox with CSP.
 - API configuration stored in renderer `localStorage`.
 - Real AI provider support:
   - OpenAI Chat Completions
@@ -50,9 +51,10 @@ Last updated: 2026-04-30
 
 1. Add persistence for highlights and chat sessions.
 2. Move API key storage from `localStorage` to a safer Electron-side storage strategy.
-3. Add visible PDF zoom controls and optional persistence for reader zoom.
-4. Add a minimal smoke-test script or Playwright check for the app shell.
+3. Add caching for generated VisualSpecs and HTML demos per highlight/context.
+4. Add visible PDF zoom controls and optional persistence for reader zoom.
+5. Add a minimal smoke-test script or Playwright check for the app shell.
 
 ## Verification Snapshot
 
-`npm run build` succeeded on 2026-04-30 after improving adjacent highlight merging for right-click AI translation.
+`npm run build` succeeded on 2026-04-30 after adding Visual Lab A/B generation with structured SVG rendering and sandboxed HTML/JS demos.

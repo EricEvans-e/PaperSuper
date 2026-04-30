@@ -36,12 +36,15 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 - Keep provider HTTP logic in `apps/desktop/electron/ai.ts`.
 - Keep global app zoom in Electron main via `webContents.setZoomFactor`; renderer may call the minimal `adjustUiZoom` preload fallback for keyboard layout compatibility.
 - Keep PDF-only zoom in the renderer/PDF reader path via `pdfScaleValue`; do not mix it with global app zoom.
+- Keep right-side structured visualization work in renderer-owned `VisualSpec` data and local React/SVG rendering.
+- HTML/JS visual demos must stay inside the `VisualLab` iframe sandbox with CSP; do not run AI-generated HTML/JS directly in the renderer.
 - API keys currently live in renderer `localStorage`; treat that as prototype-only.
 
 ## PDF Context Behavior
 
 - AI context highlights use `comment.text === "AI Context"`.
 - The right workbench does not render a selected-context list; PDF highlights are the visible source of truth.
+- The AI activity in the right workbench renders `VisualLab`; it can call the current AI provider to generate both validated `VisualSpec` JSON and a self-contained HTML/JS sandbox demo from the newest selected context item, with local preview fallback.
 - Clicking PDF text, selecting text, or Alt-dragging a text region auto-adds AI context and creates a text highlight.
 - Single-click context uses caret position plus sentence boundaries with a bounded character window; do not revert it to broad previous/current/next-line capture.
 - Alt-dragged regions extract matching text-layer spans, convert them to text highlight rects, and do not keep a rectangular area highlight or send screenshots to AI providers.
@@ -92,6 +95,7 @@ The current UI is a dark IDE shell with:
 - collapsible AI chat pane on the left, toggled from the activity bar
 - PDF pane in the center
 - reserved workbench pane on the right for Paper/AI/Settings tools
+- right AI Workspace renders a compact Visual Lab with A/B mode switching, playback, step focus, parameter sliders, and iframe sandbox HTML demos
 - draggable vertical handles between the three zones
 - compact AI chat styling at narrow widths, with drag-to-collapse and same-drag reopen behavior
 

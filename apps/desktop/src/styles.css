@@ -726,6 +726,378 @@ select:disabled {
   gap: 9px;
 }
 
+.aiWorkspacePanel {
+  overflow: hidden;
+}
+
+.visualLab {
+  display: grid;
+  grid-template-rows: minmax(280px, 1fr) auto auto;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+}
+
+.visualHero,
+.visualControls,
+.visualNotes {
+  border: 1px solid #292b31;
+  border-radius: 6px;
+  background: #18191d;
+}
+
+.visualHero {
+  display: grid;
+  grid-template-rows: auto minmax(180px, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.visualHeroHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 8px 7px 10px;
+  border-bottom: 1px solid #292b31;
+}
+
+.visualHeaderActions,
+.visualModeSwitch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.visualHeaderActions {
+  flex: 0 0 auto;
+}
+
+.visualModeSwitch {
+  padding: 2px;
+  border: 1px solid #30333a;
+  border-radius: 6px;
+  background: #101112;
+}
+
+.visualModeButton {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 22px;
+  border-radius: 4px;
+  color: #9aa0aa;
+  font-size: 11px;
+  font-weight: 800;
+  background: transparent;
+  cursor: pointer;
+}
+
+.visualModeButton:hover,
+.visualModeButton.active {
+  color: #f5f6f8;
+  background: #25272d;
+}
+
+.visualModeButton.active {
+  color: #101112;
+  background: #58c08c;
+}
+
+.visualSourceBlock {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.visualSourceBlock strong {
+  overflow: hidden;
+  color: #f5f6f8;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visualSourceLabel {
+  color: #9aa0aa;
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.compactButton {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.visualCanvasShell {
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.visualCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 210px;
+}
+
+.visualSandboxShell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+}
+
+.visualSandboxFrame {
+  width: 100%;
+  height: 100%;
+  min-height: 230px;
+  border: 1px solid #292d35;
+  border-radius: 7px;
+  background: #101112;
+}
+
+.visualSandboxFooter {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 2px 0;
+}
+
+.visualSandboxFooter strong,
+.visualSandboxFooter span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visualSandboxFooter strong {
+  color: #f5f6f8;
+  font-size: 11px;
+}
+
+.visualSandboxFooter span {
+  color: #9aa0aa;
+  font-size: 10.5px;
+}
+
+.visualGridBg {
+  fill: #121317;
+}
+
+.visualGridLine {
+  stroke: #24272e;
+  stroke-width: 1;
+}
+
+.visualEdge {
+  fill: none;
+  stroke: #3a3d46;
+  stroke-linecap: round;
+  transition:
+    stroke 160ms ease,
+    opacity 160ms ease,
+    stroke-width 160ms ease;
+}
+
+.visualEdge.active {
+  stroke: url(#visualSignalGradient);
+  opacity: 0.92;
+}
+
+.visualEdgeLabel {
+  fill: #7f858f;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.visualSignal {
+  fill: #f5f6f8;
+}
+
+.visualToken {
+  fill: #3c414b;
+  transition:
+    fill 160ms ease,
+    height 160ms ease,
+    y 160ms ease;
+}
+
+.visualToken.active {
+  fill: #6f9cff;
+}
+
+.visualNodeBox {
+  fill: #1d1f24;
+  stroke: #383c46;
+  stroke-width: 1.2;
+  transition:
+    fill 160ms ease,
+    stroke 160ms ease,
+    stroke-width 160ms ease;
+}
+
+.visualNodePulse {
+  fill: transparent;
+  stroke-width: 1;
+  opacity: 0.32;
+}
+
+.visualNode.blue .visualNodePulse {
+  stroke: #6f9cff;
+}
+
+.visualNode.green .visualNodePulse {
+  stroke: #58c08c;
+}
+
+.visualNode.amber .visualNodePulse {
+  stroke: #f2b86b;
+}
+
+.visualNode.rose .visualNodePulse {
+  stroke: #e86f8d;
+}
+
+.visualNode.active .visualNodeBox {
+  fill: #22262d;
+  stroke-width: 1.8;
+}
+
+.visualNode.blue.active .visualNodeBox {
+  stroke: #6f9cff;
+}
+
+.visualNode.green.active .visualNodeBox {
+  stroke: #58c08c;
+}
+
+.visualNode.amber.active .visualNodeBox {
+  stroke: #f2b86b;
+}
+
+.visualNode.rose.active .visualNodeBox {
+  stroke: #e86f8d;
+}
+
+.visualNodeLabel {
+  fill: #f5f6f8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.visualNodeDetail {
+  fill: #a8adb7;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.visualPlayback {
+  display: grid;
+  grid-template-columns: 24px 24px 24px minmax(0, 1fr) 24px;
+  gap: 5px;
+  align-items: center;
+  padding: 7px 8px;
+  border-top: 1px solid #292b31;
+  background: #15161a;
+}
+
+.visualStepText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.visualStepText strong,
+.visualStepText span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visualStepText strong {
+  color: #f5f6f8;
+  font-size: 11.5px;
+}
+
+.visualStepText span {
+  color: #9aa0aa;
+  font-size: 10.5px;
+}
+
+.visualControls,
+.visualNotes {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+}
+
+.visualSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e8eaed;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.visualSectionTitle svg {
+  color: #58c08c;
+}
+
+.visualSliderRow {
+  display: grid;
+  grid-template-columns: 64px minmax(70px, 1fr) 52px;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.visualSliderRow span,
+.visualSliderRow strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visualSliderRow span {
+  color: #a8adb7;
+}
+
+.visualSliderRow strong {
+  color: #f5f6f8;
+  text-align: right;
+}
+
+.visualSliderRow input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  accent-color: #58c08c;
+}
+
+.visualNotes p {
+  margin: 0;
+  color: #a8adb7;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.visualStatus {
+  color: #58c08c;
+}
+
+.visualStatus.error {
+  color: #ff9b8d;
+}
+
 .paperTitle {
   overflow: hidden;
   color: #f5f6f8;

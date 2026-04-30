@@ -414,6 +414,7 @@ export function App() {
           />
           <Workbench
             activity={activity}
+            contextItems={contextItems}
             paper={paper}
             highlights={highlights}
             modelConfig={modelConfig}

@@ -42,6 +42,12 @@ Renderer React UI
   - Extracts PDF page text in the background for contextual highlight translation.
 - `apps/desktop/src/components/Workbench.tsx`
   - Renders Paper, AI, and Settings in the right reserved workbench area.
+- `apps/desktop/src/components/VisualLab.tsx`
+  - Renders the right AI Workspace visualization scene.
+  - Uses local structured `VisualSpec` data, SVG rendering, playback state, focused steps, and parameter sliders for A mode.
+  - Renders self-contained AI-generated HTML/JS demos inside a sandboxed iframe for B mode.
+  - Calls the existing `window.paperSuper.sendAiMessage` bridge to generate both `VisualSpec` JSON and `htmlDemo` from the newest selected PDF context item.
+  - Extracts and validates model JSON before rendering; failed generation falls back to a local preview scene.
 - `apps/desktop/src/components/AiChatPanel.tsx`
   - Renders the left AI chat pane, Markdown AI answers, and stream event updates.
 
@@ -88,6 +94,19 @@ Renderer React UI
 6. Main process forwards deltas through `paperSuper:aiStreamEvent`.
 7. Renderer appends deltas into the assistant message.
 
+### AI Visual Lab
+
+1. User opens the AI activity in the right workbench.
+2. `Workbench` passes the current `contextItems` into `VisualLab`.
+3. User clicks `Generate` after selecting a paragraph or region in the PDF.
+4. `VisualLab` asks the current AI provider for strict JSON containing both `VisualSpec` and `htmlDemo` using `window.paperSuper.sendAiMessage`.
+5. The renderer extracts and validates the JSON into safe local primitives.
+6. A mode draws the scene with React/SVG instead of executing generated code.
+7. B mode injects the returned HTML body fragment into an iframe with `sandbox="allow-scripts"` and a restrictive CSP that disables network connections and external resources.
+8. Playback controls advance focused explanation steps in A mode.
+9. Parameter sliders update local visualization state such as visual energy, data count, and active window size in A mode; the HTML demo owns its internal sliders and recomputation in B mode.
+10. If generation fails or JSON is invalid, the panel keeps a local preview scene and displays the error.
+
 ### Global UI Zoom
 
 1. Main process listens to `before-input-event` on the window web contents.
@@ -131,6 +150,9 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 - `AiMessage`: chat message state
 - `AiCompletionRequest`: full payload sent to the main process
 - `AiStreamEvent`: `delta`, `done`, or `error`
+- `VisualSpec`: structured visualization scene rendered locally in the right AI Workspace
+- `VisualHtmlDemo`: self-contained HTML/JS demo rendered only inside the Visual Lab iframe sandbox
+- `VisualNode`, `VisualEdge`, `VisualParameter`, and `VisualStep`: renderer-owned visual scene primitives
 
 ## Security Boundaries
 
@@ -146,6 +168,7 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Collapsible left AI chat pane.
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
+- Right AI Workspace includes a Visual Lab with A/B mode switching between local SVG rendering and sandboxed HTML/JS demos.
 - Draggable vertical split handles between left/PDF and PDF/right zones.
 - Compact chat styling at narrow widths, with auto-collapse below the threshold and same-drag reopen when the pointer moves back right.
 

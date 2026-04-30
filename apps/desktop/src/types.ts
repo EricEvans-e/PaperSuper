@@ -45,6 +45,67 @@ export interface AiCompletionResponse {
   content: string;
 }
 
+export type VisualKind =
+  | "concept-flow"
+  | "mechanism-animation"
+  | "equation-playground"
+  | "comparison";
+
+export type VisualNodeTone = "blue" | "green" | "amber" | "rose" | "neutral";
+
+export interface VisualNode {
+  id: string;
+  label: string;
+  detail: string;
+  x: number;
+  y: number;
+  tone: VisualNodeTone;
+}
+
+export interface VisualEdge {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  strength: number;
+}
+
+export interface VisualParameter {
+  id: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+  unit?: string;
+}
+
+export interface VisualStep {
+  id: string;
+  title: string;
+  description: string;
+  focusNodeIds: string[];
+}
+
+export interface VisualHtmlDemo {
+  title: string;
+  html: string;
+  notes?: string;
+}
+
+export interface VisualSpec {
+  id: string;
+  title: string;
+  kind: VisualKind;
+  sourceContextId?: string;
+  summary: string;
+  nodes: VisualNode[];
+  edges: VisualEdge[];
+  parameters: VisualParameter[];
+  steps: VisualStep[];
+  htmlDemo?: VisualHtmlDemo;
+}
+
 export type AiStreamEvent =
   | {
       requestId: string;
