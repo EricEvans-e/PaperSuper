@@ -1,4 +1,4 @@
-import { Bot, FileText, Settings, type LucideIcon } from "lucide-react";
+import { Bot, FileText, MessageSquare, Settings, type LucideIcon } from "lucide-react";
 import type { ActivityId } from "../types";
 
 interface ActivityItem {
@@ -15,16 +15,30 @@ const activities: ActivityItem[] = [
 
 interface ActivityBarProps {
   activeActivity: ActivityId;
+  isChatOpen: boolean;
   onChange: (activity: ActivityId) => void;
+  onToggleChat: () => void;
 }
 
 export function ActivityBar({
   activeActivity,
+  isChatOpen,
   onChange,
+  onToggleChat,
 }: ActivityBarProps) {
   return (
     <nav className="activityBar" aria-label="PaperSuper">
       <div className="activityMark">PS</div>
+      <button
+        type="button"
+        className={`activityButton ${isChatOpen ? "active" : ""}`}
+        title={isChatOpen ? "Hide AI Chat" : "Show AI Chat"}
+        aria-label={isChatOpen ? "Hide AI Chat" : "Show AI Chat"}
+        aria-pressed={isChatOpen}
+        onClick={onToggleChat}
+      >
+        <MessageSquare size={17} strokeWidth={1.9} />
+      </button>
       <div className="activityButtons">
         {activities.map(({ id, label, icon: Icon }) => (
           <button

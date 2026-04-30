@@ -5,28 +5,20 @@ import {
   KeyRound,
   Sparkle,
 } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
-import { useRef, useState } from "react";
 import type { IHighlight } from "../pdf-highlighter";
 import type {
   ActivityId,
-  AiContextItem,
-  AiMessage,
   AiProvider,
   ModelConfig,
   PaperDocument,
 } from "../types";
 import { formatTime } from "../utils";
-import { AiChatPanel } from "./AiChatPanel";
 
 interface WorkbenchProps {
   activity: ActivityId;
   paper: PaperDocument;
   highlights: IHighlight[];
-  contextItems: AiContextItem[];
-  messages: AiMessage[];
   modelConfig: ModelConfig;
-  onMessagesChange: Dispatch<SetStateAction<AiMessage[]>>;
   onModelConfigChange: (config: ModelConfig) => void;
   onOpenPdf: () => void;
 }
@@ -39,39 +31,10 @@ export function Workbench({
   activity,
   paper,
   highlights,
-  contextItems,
-  messages,
   modelConfig,
-  onMessagesChange,
   onModelConfigChange,
   onOpenPdf,
 }: WorkbenchProps) {
-  const [chatHeight, setChatHeight] = useState(320);
-  const dockRef = useRef<HTMLElement>(null);
-
-  const handleChatResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const startY = event.clientY;
-    const startHeight = chatHeight;
-
-    const move = (pointerEvent: PointerEvent) => {
-      const dockHeight = dockRef.current?.getBoundingClientRect().height ?? 720;
-      const maxHeight = Math.max(260, dockHeight - 190);
-      const nextHeight = startHeight - (pointerEvent.clientY - startY);
-      setChatHeight(Math.min(maxHeight, Math.max(240, nextHeight)));
-    };
-
-    const stop = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-      document.body.classList.remove("isResizingChat");
-    };
-
-    document.body.classList.add("isResizingChat");
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop);
-  };
-
   const renderActivePanel = () => {
     if (activity === "paper") {
       return (
@@ -101,27 +64,8 @@ export function Workbench({
   };
 
   return (
-    <aside
-      className="workbenchDock"
-      ref={dockRef}
-      style={{
-        gridTemplateRows: `minmax(0, 1fr) 8px ${chatHeight}px`,
-      }}
-    >
+    <aside className="workbenchDock reservedDock">
       <div className="workbenchTopSlot">{renderActivePanel()}</div>
-      <div
-        className="workbenchChatResizeHandle"
-        role="separator"
-        aria-orientation="horizontal"
-        onPointerDown={handleChatResizeStart}
-      />
-      <AiChatPanel
-        paper={paper}
-        contextItems={contextItems}
-        messages={messages}
-        modelConfig={modelConfig}
-        onMessagesChange={onMessagesChange}
-      />
     </aside>
   );
 }

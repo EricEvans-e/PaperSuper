@@ -1,6 +1,6 @@
 # PaperSuper
 
-PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI research IDE. The current app wraps `react-pdf-highlighter` as the PDF reading and annotation base, then adds a right-side research workbench with paper tools, AI settings, and a resizable lower AI chat window.
+PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI research IDE. The current app wraps `react-pdf-highlighter` as the PDF reading and annotation base, then uses a three-zone IDE layout: collapsible AI chat on the left, PDF reading in the center, and a reserved interaction workbench on the right.
 
 ## Current Capabilities
 
@@ -20,7 +20,7 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
   - Anthropic Messages
 - AI answers are rendered as Markdown with GFM support.
 - Streaming AI output is wired through Electron IPC events.
-- The right workbench is split vertically: upper tools, lower resizable AI chat.
+- Three-zone workspace: collapsible left AI chat, central PDF reader, and right interaction/reserved panel.
 
 ## Setup
 

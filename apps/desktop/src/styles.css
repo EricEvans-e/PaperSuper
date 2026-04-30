@@ -76,6 +76,10 @@ select:disabled {
   background: #1b1c20;
 }
 
+.activityBar > .activityButton {
+  flex: 0 0 auto;
+}
+
 .activityButtons {
   display: grid;
   gap: 5px;
@@ -290,35 +294,14 @@ select:disabled {
   background: #101112;
 }
 
-.splitHandle {
-  position: relative;
-  background: #101112;
-  cursor: col-resize;
-}
-
-.splitHandle::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 3px;
-  width: 2px;
-  content: "";
-  background: #2b2d32;
-}
-
-.splitHandle:hover::before,
-.isResizing .splitHandle::before {
-  background: #58c08c;
-}
-
-.isResizing {
-  cursor: col-resize;
-  user-select: none;
+.threeZoneWorkspace {
+  overflow: hidden;
 }
 
 .pdfPane,
 .workbenchPanel,
-.workbenchDock {
+.workbenchDock,
+.aiChatPanel {
   min-width: 0;
   min-height: 0;
 }
@@ -327,6 +310,7 @@ select:disabled {
   display: grid;
   grid-template-rows: 48px minmax(0, 1fr);
   border-right: 1px solid #24262b;
+  border-left: 1px solid #24262b;
   background: #f4f5f2;
   color: #1f2329;
 }
@@ -381,13 +365,19 @@ select:disabled {
 
 .workbenchDock {
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
   background: #141416;
+}
+
+.reservedDock {
+  border-left: 1px solid #24262b;
 }
 
 .workbenchTopSlot {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -400,27 +390,6 @@ select:disabled {
   overflow: auto;
   padding: 10px;
   background: #141416;
-}
-
-.workbenchChatResizeHandle {
-  position: relative;
-  background: #101112;
-  cursor: row-resize;
-}
-
-.workbenchChatResizeHandle::before {
-  position: absolute;
-  top: 3px;
-  right: 10px;
-  left: 10px;
-  height: 2px;
-  content: "";
-  background: #2b2d32;
-}
-
-.workbenchChatResizeHandle:hover::before,
-.isResizingChat .workbenchChatResizeHandle::before {
-  background: #58c08c;
 }
 
 .panelHeader {
@@ -574,15 +543,10 @@ select:disabled {
   min-height: 0;
 }
 
-.rightChatPanel {
+.aiChatPanel {
   min-height: 0;
-  margin: 0 10px 10px;
+  margin: 10px 0 10px 10px;
   overflow: hidden;
-}
-
-.isResizingChat {
-  cursor: row-resize;
-  user-select: none;
 }
 
 .chatHeader {

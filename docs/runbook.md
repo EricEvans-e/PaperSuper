@@ -41,9 +41,10 @@ npm run preview
 7. Select text or draw a visual region and verify it is auto-highlighted.
 8. Open a local PDF with the title-bar Open PDF button.
 9. Switch between Paper, AI, and Settings activities.
-10. Configure one AI provider and send a short prompt.
-11. Confirm streaming output appears as Markdown.
-12. Run `npm run build`.
+10. Toggle the left AI chat from the activity bar and confirm the PDF pane expands/collapses cleanly.
+11. Configure one AI provider and send a short prompt from the left AI chat.
+12. Confirm streaming output appears as Markdown.
+13. Run `npm run build`.
 
 ## AI Configuration
 
@@ -93,9 +94,9 @@ Check:
 - Local PDF selection returns an `ArrayBuffer` from the main process.
 - `pdfjs-dist/build/pdf.worker.min.mjs?url` still resolves in `PdfReaderPane`.
 
-### AI chat area is hard to see
+### AI chat area is hidden
 
-The chat lives in the lower part of the right workbench. Drag the horizontal handle above the chat to resize it. If it still disappears, check the `workbenchDock`, `workbenchChatResizeHandle`, and `rightChatPanel` styles.
+The chat lives in the collapsible left pane. Use the chat button in the far-left activity bar to show or hide it. If it still disappears, check the `threeZoneWorkspace` and `aiChatPanel` styles.
 
 ## Safe Editing Notes
 

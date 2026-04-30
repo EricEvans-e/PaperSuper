@@ -137,7 +137,7 @@ export function AiChatPanel({
   };
 
   return (
-    <section className="card chatCard rightChatPanel">
+    <section className="card chatCard aiChatPanel">
       <div className="chatHeader">
         <div className="chatTitleBlock">
           <Bot size={14} />

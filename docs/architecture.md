@@ -31,16 +31,16 @@ Renderer React UI
   - Sends requests to OpenAI Chat Completions, OpenAI Responses, or Anthropic Messages.
   - Parses normal JSON responses and SSE streaming responses.
 - `apps/desktop/src/App.tsx`
-  - Owns top-level renderer state: active activity, current paper, PDF URL, highlights, selected AI context, messages, model config, and split pane width.
+  - Owns top-level renderer state: active activity, current paper, PDF URL, highlights, selected AI context, messages, model config, and whether the left AI chat pane is open.
+  - Renders the three-zone workspace grid: AI chat, PDF reader, and right workbench.
 - `apps/desktop/src/components/PdfReaderPane.tsx`
   - Loads PDF.js worker.
   - Wraps `react-pdf-highlighter`.
   - Handles text/area highlights, click-to-context capture, and selected-context capture.
 - `apps/desktop/src/components/Workbench.tsx`
-  - Renders Paper, AI, and Settings in the upper right workbench area.
-  - Hosts the resizable lower AI chat panel.
+  - Renders Paper, AI, and Settings in the right reserved workbench area.
 - `apps/desktop/src/components/AiChatPanel.tsx`
-  - Renders Markdown AI answers and listens for stream events.
+  - Renders the left AI chat pane, Markdown AI answers, and stream event updates.
 
 ## Data Flow
 
@@ -64,7 +64,7 @@ Renderer React UI
 
 ### Streaming AI Chat
 
-1. User submits a message in `Workbench`.
+1. User submits a message in the left `AiChatPanel`.
 2. Renderer appends a user message and an empty assistant message.
 3. Renderer calls `window.paperSuper.sendAiMessageStream(requestId, request)`.
 4. Main process calls `streamAiCompletion`.
@@ -106,8 +106,8 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 
 The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 
-- Left PDF pane.
-- Draggable vertical split handle.
-- Right workbench pane split into an upper tool area and lower AI chat.
+- Collapsible left AI chat pane.
+- Center PDF pane.
+- Right reserved workbench pane for Paper, AI, and Settings tools.
 
-The AI chat has streaming and Markdown support. As of 2026-04-30, it is implemented as a resizable lower window inside the right workbench.
+The AI chat has streaming and Markdown support. As of 2026-04-30, it is implemented as a collapsible left pane controlled by the activity bar.

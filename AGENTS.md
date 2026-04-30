@@ -63,8 +63,8 @@ The current UI is a dark IDE shell with:
 
 - activity bar on the far left
 - title bar at the top
-- PDF pane on the left
-- draggable vertical split handle
-- workbench pane on the right
+- collapsible AI chat pane on the left, toggled from the activity bar
+- PDF pane in the center
+- reserved workbench pane on the right for Paper/AI/Settings tools
 
-As of 2026-04-30, the right workbench is split vertically: upper area for Paper/AI/Settings tools, lower area for a resizable AI chat panel. A later iteration can promote chat to a full-width global bottom dock if needed.
+As of 2026-04-30, AI chat is no longer inside the right workbench. `App` owns the three-zone grid and renders `AiChatPanel` as the collapsible left pane.

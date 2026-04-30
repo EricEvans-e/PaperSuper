@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityBar } from "./components/ActivityBar";
+import { AiChatPanel } from "./components/AiChatPanel";
 import { PdfReaderPane } from "./components/PdfReaderPane";
 import { TitleBar } from "./components/TitleBar";
 import { Workbench } from "./components/Workbench";
@@ -61,7 +62,7 @@ export function App() {
     {
       id: makeId(),
       role: "assistant",
-      content: "PaperSuper is ready. Select PDF text to attach context, then ask in the chat below.",
+      content: "PaperSuper is ready. Select PDF text to attach context, then ask in the chat panel.",
       createdAt: new Date().toISOString(),
       isLocal: true,
     },
@@ -69,10 +70,9 @@ export function App() {
   const [modelConfig, setModelConfig] = useState<ModelConfig>(() =>
     readStoredModelConfig(),
   );
-  const [splitPercent, setSplitPercent] = useState(45);
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const [openError, setOpenError] = useState<string | null>(null);
 
-  const workspaceRef = useRef<HTMLDivElement>(null);
   const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -178,44 +178,35 @@ export function App() {
     );
   };
 
-  const handleResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const container = workspaceRef.current;
-    if (!container) {
-      return;
-    }
-
-    const rect = container.getBoundingClientRect();
-
-    const move = (pointerEvent: PointerEvent) => {
-      const raw = ((pointerEvent.clientX - rect.left) / rect.width) * 100;
-      setSplitPercent(Math.min(68, Math.max(32, raw)));
-    };
-
-    const stop = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-      document.body.classList.remove("isResizing");
-    };
-
-    document.body.classList.add("isResizing");
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop);
-  };
-
-  const splitStyle = useMemo(
+  const workspaceStyle = useMemo(
     () => ({
-      gridTemplateColumns: `${splitPercent}% 8px minmax(360px, 1fr)`,
+      gridTemplateColumns: isChatOpen
+        ? "minmax(300px, 340px) minmax(0, 1fr) minmax(280px, 360px)"
+        : "minmax(0, 1fr) minmax(280px, 360px)",
     }),
-    [splitPercent],
+    [isChatOpen],
   );
 
   return (
     <div className="appShell">
-      <ActivityBar activeActivity={activity} onChange={setActivity} />
+      <ActivityBar
+        activeActivity={activity}
+        isChatOpen={isChatOpen}
+        onChange={setActivity}
+        onToggleChat={() => setIsChatOpen((open) => !open)}
+      />
       <div className="appMain">
         <TitleBar paper={paper} onOpenPdf={openPdfFile} openError={openError} />
-        <main className="workspace" style={splitStyle} ref={workspaceRef}>
+        <main className="workspace threeZoneWorkspace" style={workspaceStyle}>
+          {isChatOpen ? (
+            <AiChatPanel
+              paper={paper}
+              contextItems={contextItems}
+              messages={messages}
+              modelConfig={modelConfig}
+              onMessagesChange={setMessages}
+            />
+          ) : null}
           <PdfReaderPane
             paper={paper}
             pdfUrl={pdfUrl}
@@ -225,20 +216,11 @@ export function App() {
             onRemoveContextHighlight={removeContextHighlight}
             onClearContextHighlights={clearContextHighlights}
           />
-          <div
-            className="splitHandle"
-            role="separator"
-            aria-orientation="vertical"
-            onPointerDown={handleResizeStart}
-          />
           <Workbench
             activity={activity}
             paper={paper}
             highlights={highlights}
-            contextItems={contextItems}
-            messages={messages}
             modelConfig={modelConfig}
-            onMessagesChange={setMessages}
             onModelConfigChange={setModelConfig}
             onOpenPdf={openPdfFile}
           />
