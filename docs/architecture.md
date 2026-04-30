@@ -42,12 +42,17 @@ Renderer React UI
   - Extracts PDF page text in the background for contextual highlight translation.
 - `apps/desktop/src/components/Workbench.tsx`
   - Renders Paper, AI, and Settings in the right reserved workbench area.
+- `apps/desktop/src/components/AiWorkbench.tsx`
+  - Renders the right AI Workbench as a modular learning workspace.
+  - Generates and validates `WorkspaceSpec` JSON from the newest selected PDF context item.
+  - Provides Visual, Formula, Experiment, and Insight modules.
+  - Uses local preview modules when AI generation fails or no passage is selected.
 - `apps/desktop/src/components/VisualLab.tsx`
-  - Renders the right AI Workspace visualization scene.
+  - Renders the Visual module inside the right AI Workbench.
   - Uses local structured `VisualSpec` data, SVG rendering, playback state, focused steps, and parameter sliders for A mode.
   - Supports both legacy `nodes` / `edges` flow diagrams and richer declarative `visualElements` such as matrices, layer stacks, formulas, brackets, bars, axes, annotations, and arrows.
   - Renders self-contained AI-generated HTML/JS demos inside a sandboxed iframe for B mode.
-  - Calls the existing `window.paperSuper.sendAiMessage` bridge to generate both `VisualSpec` JSON and `htmlDemo` from the newest selected PDF context item.
+  - Can still generate a standalone `VisualSpec`, but the right-side primary flow now comes through `AiWorkbench` and `WorkspaceSpec`.
   - Extracts and validates model JSON before rendering; failed generation falls back to a local preview scene.
 - `apps/desktop/src/visualSimulation.ts`
   - Computes the local Visual Lab A-mode simulation state from `VisualSpec.parameters` and current slider values.
@@ -99,22 +104,25 @@ Renderer React UI
 6. Main process forwards deltas through `paperSuper:aiStreamEvent`.
 7. Renderer appends deltas into the assistant message.
 
-### AI Visual Lab
+### AI Workbench
 
 1. User opens the AI activity in the right workbench.
-2. `Workbench` passes the current `contextItems` into `VisualLab`.
+2. `Workbench` passes the current `contextItems` into `AiWorkbench`.
 3. User clicks `Generate` after selecting a paragraph or region in the PDF.
-4. `VisualLab` asks the current AI provider for strict JSON containing both `VisualSpec` and `htmlDemo` using `window.paperSuper.sendAiMessage`.
-5. The renderer extracts and validates the JSON into safe local primitives.
-6. A mode draws the scene with React/SVG instead of executing generated code.
-7. A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
-8. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
-9. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
-10. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
-11. B mode injects the returned HTML body fragment into an iframe with `sandbox="allow-scripts"` and a restrictive CSP that disables network connections and external resources.
-12. B-mode demos own their internal controls and recomputation loop, but remain isolated from the renderer and native APIs.
-13. Playback controls advance focused explanation steps in A mode and can focus both node ids and visual element ids.
-14. If generation fails or JSON is invalid, the panel keeps a local preview scene and displays the error.
+4. `AiWorkbench` asks the current AI provider for strict `WorkspaceSpec` JSON using `window.paperSuper.sendAiMessage`.
+5. The prompt intentionally asks for local safe modules only; it does not ask for HTML, JavaScript, CSS, SVG markup, or executable code.
+6. The renderer extracts and validates the JSON into safe local primitives.
+7. The Visual module passes a validated `VisualSpec` into `VisualLab`.
+8. The Formula module renders expression, plain-language explanation, variables, and derivation steps.
+9. The Experiment module renders parameter sliders, local computed metrics, a lightweight teaching curve, and observations.
+10. The Insight module renders key points, assumptions, limitations, and next questions.
+11. Visual A mode draws the scene with React/SVG instead of executing generated code.
+12. Visual A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
+13. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
+14. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
+15. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
+16. B-mode HTML demos remain isolated in the existing iframe sandbox and are no longer part of the main Workbench generation request.
+17. If generation fails or JSON is invalid, the panel keeps a local preview workspace and displays the error.
 
 ### Global UI Zoom
 
@@ -159,6 +167,8 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 - `AiMessage`: chat message state
 - `AiCompletionRequest`: full payload sent to the main process
 - `AiStreamEvent`: `delta`, `done`, or `error`
+- `WorkspaceSpec`: modular right-side AI Workbench scene generated from selected paper context
+- `WorkspaceModule`: Visual, Formula, Experiment, or Insight module
 - `VisualSpec`: structured visualization scene rendered locally in the right AI Workspace
 - `VisualHtmlDemo`: self-contained HTML/JS demo rendered only inside the Visual Lab iframe sandbox
 - `VisualSimulationSpec`: optional model hint for the local Visual Lab simulation engine
@@ -179,7 +189,8 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Collapsible left AI chat pane.
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
-- Right AI Workspace includes a Visual Lab with A/B mode switching between local SVG rendering and sandboxed HTML/JS demos.
+- Right AI Workbench includes Visual, Formula, Experiment, and Insight modules.
+- The Visual module includes Visual Lab with A/B mode switching between local SVG rendering and sandboxed HTML/JS demos.
 - A-mode local SVG rendering can combine flow nodes, edges, simulation layers, and declarative visual elements for non-flowchart diagrams.
 - Draggable vertical split handles between left/PDF and PDF/right zones.
 - Compact chat styling at narrow widths, with auto-collapse below the threshold and same-drag reopen when the pointer moves back right.

@@ -1,6 +1,6 @@
 # PaperSuper
 
-PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI research IDE. The current app wraps `react-pdf-highlighter` as the PDF reading and annotation base, then uses a three-zone IDE layout: collapsible AI chat on the left, PDF reading in the center, and a reserved interaction workbench on the right.
+PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI research IDE. The current app wraps `react-pdf-highlighter` as the PDF reading and annotation base, then uses a three-zone IDE layout: collapsible AI chat on the left, PDF reading in the center, and a modular AI Workbench on the right.
 
 ## Current Capabilities
 
@@ -28,10 +28,15 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
 - Three-zone workspace: collapsible left AI chat, central PDF reader, and right interaction/reserved panel.
 - Left AI chat width and right reserved panel width can be adjusted manually and are persisted locally.
 - The left AI chat uses a compact layout at narrow widths, auto-collapses below the threshold, and can reopen during the same drag if pulled back right.
-- Right AI Workspace includes Visual Lab A/B output:
+- Right AI Workbench renders modular learning panels generated from the selected paper context:
+  - Visual module: structure diagrams, animations, parameters, and optional sandbox demo.
+  - Formula module: expression, variable meanings, and derivation steps.
+  - Experiment module: sliders, computed teaching metrics, curves, and observations.
+  - Insight module: key points, assumptions, limitations, and next questions.
+- The Visual module includes Visual Lab A/B output:
   - A mode renders validated AI-generated `VisualSpec` data with local React/SVG playback, parameter sliders, and a local simulation engine that recomputes blocks, active windows, GPU lanes, metrics, and animation speed as sliders move.
   - A mode also supports safe declarative `visualElements` for richer diagrams such as model architecture blocks, matrices, layer stacks, formula callouts, brackets, bars, axes, annotations, and arrows.
-  - B mode renders an AI-generated self-contained HTML/JS teaching demo inside an iframe sandbox, with its own controls and recomputation loop for comparison.
+  - B mode renders a self-contained HTML/JS teaching demo inside an iframe sandbox when provided, with its own controls and recomputation loop for comparison.
 - Global UI zoom uses `Ctrl/Cmd + +` or `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, and `Ctrl/Cmd + 0`, with the zoom factor persisted by Electron.
 - PDF reader zoom uses `Ctrl/Cmd + mouse wheel` inside the paper pane, affects only the PDF view, and keeps existing highlights aligned after scaling.
 
@@ -72,7 +77,7 @@ For OpenAI-compatible gateways that only implement Chat Completions, choose `Ope
 apps/desktop/electron/   Electron main process, preload bridge, AI HTTP clients
 apps/desktop/src/        React renderer app
 apps/desktop/src/components/
-                         PDF pane, activity bar, title bar, workbench, Visual Lab
+                         PDF pane, activity bar, title bar, AI Workbench, Visual Lab
 apps/desktop/src/visualSimulation.ts
                          Local parameter-driven simulation engine for Visual Lab A mode
 react-pdf-highlighter/   Vendored PDF highlighting source used by the app

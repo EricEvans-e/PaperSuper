@@ -12,7 +12,7 @@ import type {
   PaperDocument,
 } from "../types";
 import { formatTime } from "../utils";
-import { VisualLab } from "./VisualLab";
+import { AiWorkbench } from "./AiWorkbench";
 
 interface WorkbenchProps {
   activity: ActivityId;
@@ -111,11 +111,11 @@ function AiPanel({
     <aside className="workbenchPanel aiWorkspacePanel">
       <PanelHeader
         eyebrow="AI Cockpit"
-        title="Visual Lab"
+        title="AI Workbench"
         icon={Bot}
         badge={modelConfig.model || "No model"}
       />
-      <VisualLab
+      <AiWorkbench
         contextItems={contextItems}
         modelConfig={modelConfig}
         paper={paper}

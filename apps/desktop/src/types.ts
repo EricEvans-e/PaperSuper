@@ -158,6 +158,77 @@ export interface VisualSpec {
   htmlDemo?: VisualHtmlDemo;
 }
 
+export type WorkspaceModuleType = "visual" | "formula" | "experiment" | "insight";
+
+export interface WorkspaceSpec {
+  id: string;
+  title: string;
+  summary: string;
+  sourceContextId?: string;
+  modules: WorkspaceModule[];
+}
+
+export interface WorkspaceModuleBase {
+  id: string;
+  type: WorkspaceModuleType;
+  title: string;
+  summary?: string;
+}
+
+export interface VisualWorkspaceModule extends WorkspaceModuleBase {
+  type: "visual";
+  visual: VisualSpec;
+}
+
+export interface FormulaWorkspaceModule extends WorkspaceModuleBase {
+  type: "formula";
+  formula: {
+    expression: string;
+    plainLanguage: string;
+    variables: Array<{
+      symbol: string;
+      meaning: string;
+      role?: string;
+    }>;
+    derivationSteps: Array<{
+      title: string;
+      detail: string;
+    }>;
+  };
+}
+
+export interface ExperimentWorkspaceModule extends WorkspaceModuleBase {
+  type: "experiment";
+  experiment: {
+    objective: string;
+    parameters: VisualParameter[];
+    metrics: Array<{
+      id: string;
+      label: string;
+      baseline: number;
+      direction?: "higher-better" | "lower-better" | "neutral";
+      unit?: string;
+    }>;
+    observations: string[];
+  };
+}
+
+export interface InsightWorkspaceModule extends WorkspaceModuleBase {
+  type: "insight";
+  insight: {
+    keyPoints: string[];
+    assumptions: string[];
+    limitations: string[];
+    nextQuestions: string[];
+  };
+}
+
+export type WorkspaceModule =
+  | VisualWorkspaceModule
+  | FormulaWorkspaceModule
+  | ExperimentWorkspaceModule
+  | InsightWorkspaceModule;
+
 export type AiStreamEvent =
   | {
       requestId: string;

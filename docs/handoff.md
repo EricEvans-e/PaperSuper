@@ -24,7 +24,10 @@ Last updated: 2026-04-30
 - Three-zone workspace with collapsible and resizable left AI chat, center PDF reader, and resizable right reserved workbench.
 - Left AI chat has compact narrow-width styling, auto-collapses when dragged below the threshold, and can reopen during the same drag when pulled back right.
 - Workspace widths and chat visibility are persisted in renderer `localStorage`.
-- Right AI Workspace Visual Lab with A/B output: validated AI-generated `VisualSpec` JSON rendered locally with React/SVG, plus AI-generated self-contained HTML/JS demos rendered only inside an iframe sandbox with CSP.
+- Right AI Workbench with modular Visual, Formula, Experiment, and Insight panels generated from selected paper context.
+- Main AI Workbench generation now requests structured `WorkspaceSpec` JSON only, keeping HTML/JS sandbox demos out of the primary request path to reduce timeouts.
+- Right AI Workbench content scrolls as a whole so taller modules are not clipped.
+- Visual module with A/B output: validated AI-generated `VisualSpec` JSON rendered locally with React/SVG, plus self-contained HTML/JS demos rendered only inside an iframe sandbox with CSP when provided.
 - Visual Lab A mode now uses a local parameter-driven simulation engine, so slider changes recompute and redraw teaching visuals such as K/V cache blocks, token interleaving, transfer blocks, GPU lanes, metric cards, and flow speed.
 - Visual Lab A mode also supports declarative `visualElements`, allowing generated scenes to render richer non-flowchart diagrams such as architecture blocks, matrices, layer stacks, formulas, bars, brackets, axes, annotations, and arrows.
 - Visual Lab B mode prompt now asks for a teaching-oriented self-contained HTML/JS demo with visible controls and a recomputation loop, isolated in the existing iframe sandbox.
@@ -54,12 +57,12 @@ Last updated: 2026-04-30
 
 1. Add persistence for highlights and chat sessions.
 2. Move API key storage from `localStorage` to a safer Electron-side storage strategy.
-3. Add caching for generated VisualSpecs, simulation states, and HTML demos per highlight/context.
+3. Add caching for generated WorkspaceSpecs, VisualSpecs, simulation states, and HTML demos per highlight/context.
 4. Add richer simulation templates beyond the current KV-cache-oriented default, especially for equations, attention, diffusion, optimization, and statistical experiments.
 5. Add more A-mode visual element kinds if needed, such as heatmaps with labels, small multiples, decision trees, coordinate plots, or simple 3D projections.
 6. Add visible PDF zoom controls and optional persistence for reader zoom.
-7. Add a minimal smoke-test script or Playwright check for the app shell and Visual Lab sliders.
+7. Add a minimal smoke-test script or Playwright check for the app shell, AI Workbench tabs, and Visual module sliders.
 
 ## Verification Snapshot
 
-`npm run build` succeeded on 2026-04-30 after expanding Visual Lab A mode with declarative visual elements, parameter-driven simulations, structured SVG rendering, and sandboxed HTML/JS demos.
+`npm run build` succeeded on 2026-04-30 after adding the modular AI Workbench, right-side scrolling, declarative visual elements, parameter-driven simulations, structured SVG rendering, and sandboxed HTML/JS demos.

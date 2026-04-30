@@ -33,6 +33,8 @@ interface VisualLabProps {
   contextItems: AiContextItem[];
   modelConfig: ModelConfig;
   paper: PaperDocument;
+  specOverride?: VisualSpec;
+  hideGenerate?: boolean;
 }
 
 type VisualViewMode = "structured" | "html";
@@ -371,7 +373,7 @@ const inferSimulationModelFromText = (text: string): VisualSimulationModel => {
 };
 
 // 结构化轨道是主安全路径：AI 只给数据，渲染和交互都由本地 React/SVG 接管。
-const normalizeVisualSpec = (
+export const normalizeVisualSpec = (
   raw: unknown,
   activeContext: AiContextItem,
 ): VisualSpec => {
@@ -618,7 +620,7 @@ const normalizeVisualSpec = (
   };
 };
 
-const createMockVisualSpec = (
+export const createMockVisualSpec = (
   activeContext: AiContextItem | undefined,
   revision: number,
 ): VisualSpec => {
@@ -880,8 +882,10 @@ const buildSandboxSrcDoc = (html: string) =>
 
 export function VisualLab({
   contextItems,
+  hideGenerate = false,
   modelConfig,
   paper,
+  specOverride,
 }: VisualLabProps) {
   const [revision, setRevision] = useState(0);
   const activeContext = contextItems[0];
@@ -894,7 +898,7 @@ export function VisualLab({
     () => createMockVisualSpec(activeContext, revision),
     [activeContext, revision],
   );
-  const spec = generatedSpec ?? fallbackSpec;
+  const spec = specOverride ?? generatedSpec ?? fallbackSpec;
   const [parameterValues, setParameterValues] = useState<Record<string, number>>(
     () => parameterDefaults(spec.parameters),
   );
@@ -948,6 +952,10 @@ export function VisualLab({
   };
 
   const generateVisual = async () => {
+    if (hideGenerate) {
+      return;
+    }
+
     if (!activeContext?.text.trim()) {
       setGenerationStatus("error");
       setGenerationError("Select a PDF paragraph before generating a visual.");
@@ -1002,6 +1010,8 @@ export function VisualLab({
   const statusLabel =
     generationStatus === "loading"
       ? "Generating visual..."
+      : specOverride
+        ? "Workspace visual module loaded"
       : generationStatus === "done"
         ? "AI VisualSpec loaded"
         : generationStatus === "error"
@@ -1038,15 +1048,17 @@ export function VisualLab({
                 B
               </button>
             </div>
-            <button
-              type="button"
-              className="ghostButton compactButton"
-              disabled={generationStatus === "loading" || !activeContext}
-              onClick={() => void generateVisual()}
-            >
-              <Sparkles size={13} />
-              <span>{generationStatus === "loading" ? "Working" : "Generate"}</span>
-            </button>
+            {!hideGenerate ? (
+              <button
+                type="button"
+                className="ghostButton compactButton"
+                disabled={generationStatus === "loading" || !activeContext}
+                onClick={() => void generateVisual()}
+              >
+                <Sparkles size={13} />
+                <span>{generationStatus === "loading" ? "Working" : "Generate"}</span>
+              </button>
+            ) : null}
           </div>
         </div>
 

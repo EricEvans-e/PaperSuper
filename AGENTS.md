@@ -11,6 +11,7 @@ PaperSuper is an Electron + React + TypeScript desktop prototype for a PDF-first
 - AI HTTP clients: `apps/desktop/electron/ai.ts`
 - Global UI zoom shortcuts and persistence: `apps/desktop/electron/main.ts`
 - PDF wrapper export: `apps/desktop/src/pdf-highlighter.ts`
+- Right AI Workbench container: `apps/desktop/src/components/AiWorkbench.tsx`
 - Visual Lab local simulation engine: `apps/desktop/src/visualSimulation.ts`
 - Vendored PDF base: `react-pdf-highlighter/`
 - Docs: `docs/`
@@ -37,6 +38,7 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 - Keep provider HTTP logic in `apps/desktop/electron/ai.ts`.
 - Keep global app zoom in Electron main via `webContents.setZoomFactor`; renderer may call the minimal `adjustUiZoom` preload fallback for keyboard layout compatibility.
 - Keep PDF-only zoom in the renderer/PDF reader path via `pdfScaleValue`; do not mix it with global app zoom.
+- Keep the right side organized around `WorkspaceSpec` modules in `AiWorkbench`; `VisualLab` is the visual module, not the whole right-side product.
 - Keep right-side structured visualization work in renderer-owned `VisualSpec` data and local React/SVG rendering.
 - A-mode `VisualSpec` can include both legacy `nodes` / `edges` and richer declarative `visualElements`; prefer adding safe SVG primitives over executing generated code.
 - Visual Lab A mode parameters should flow through `computeVisualSimulation`; sliders must visibly recompute local state, not only update numeric labels.
@@ -48,7 +50,7 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 
 - AI context highlights use `comment.text === "AI Context"`.
 - The right workbench does not render a selected-context list; PDF highlights are the visible source of truth.
-- The AI activity in the right workbench renders `VisualLab`; it can call the current AI provider to generate both validated `VisualSpec` JSON and a self-contained HTML/JS sandbox demo from the newest selected context item, with local preview fallback.
+- The AI activity in the right workbench renders `AiWorkbench`; it can call the current AI provider to generate a modular `WorkspaceSpec` from the newest selected context item, with local preview fallback.
 - Clicking PDF text, selecting text, or Alt-dragging a text region auto-adds AI context and creates a text highlight.
 - Single-click context uses caret position plus sentence boundaries with a bounded character window; do not revert it to broad previous/current/next-line capture.
 - Alt-dragged regions extract matching text-layer spans, convert them to text highlight rects, and do not keep a rectangular area highlight or send screenshots to AI providers.
@@ -99,7 +101,7 @@ The current UI is a dark IDE shell with:
 - collapsible AI chat pane on the left, toggled from the activity bar
 - PDF pane in the center
 - reserved workbench pane on the right for Paper/AI/Settings tools
-- right AI Workspace renders a compact Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, declarative SVG visual elements, and iframe sandbox HTML demos
+- right AI Workbench renders modular Visual, Formula, Experiment, and Insight panels; the Visual panel contains Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, declarative SVG visual elements, and iframe sandbox HTML demos
 - draggable vertical handles between the three zones
 - compact AI chat styling at narrow widths, with drag-to-collapse and same-drag reopen behavior
 
