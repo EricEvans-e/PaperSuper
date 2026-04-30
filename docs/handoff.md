@@ -8,6 +8,7 @@ Last updated: 2026-04-30
 - `electron-vite` config and root npm scripts.
 - Windows-safe `scripts/run-electron-vite.cjs` launcher.
 - PDF pane based on `react-pdf-highlighter`.
+- `react-pdf-highlighter/` is vendored as normal source in the main repository.
 - Default sample arXiv PDF.
 - Local PDF open through Electron IPC.
 - Text highlights, area highlights, comments, and annotation jump list.
@@ -49,4 +50,4 @@ Last updated: 2026-04-30
 
 ## Verification Snapshot
 
-`npm run build` succeeded on 2026-04-30 after the PDF blank-click context clearing documentation sync.
+`npm run build` succeeded on 2026-04-30 after flattening `react-pdf-highlighter/` into the main repository.

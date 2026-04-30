@@ -10,7 +10,7 @@ PaperSuper is an Electron + React + TypeScript desktop prototype for a PDF-first
 - Electron main/preload: `apps/desktop/electron`
 - AI HTTP clients: `apps/desktop/electron/ai.ts`
 - PDF wrapper export: `apps/desktop/src/pdf-highlighter.ts`
-- Upstream PDF base: `react-pdf-highlighter/`
+- Vendored PDF base: `react-pdf-highlighter/`
 - Docs: `docs/`
 
 ## Commands
@@ -28,8 +28,8 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 
 ## Important Rules
 
-- Do not delete or rewrite `react-pdf-highlighter/.git`; it is a nested upstream project.
-- Prefer app-level wrappers and components over editing upstream `react-pdf-highlighter` internals.
+- `react-pdf-highlighter/` is vendored source inside the main repository, not a submodule.
+- Prefer app-level wrappers and components before editing vendored `react-pdf-highlighter` internals.
 - Keep renderer access to native capabilities behind `window.paperSuper` in preload.
 - Do not expose broad Node APIs to the renderer.
 - Keep provider HTTP logic in `apps/desktop/electron/ai.ts`.

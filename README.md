@@ -60,7 +60,7 @@ apps/desktop/electron/   Electron main process, preload bridge, AI HTTP clients
 apps/desktop/src/        React renderer app
 apps/desktop/src/components/
                          PDF pane, activity bar, title bar, workbench components
-react-pdf-highlighter/   Upstream PDF highlighting project kept as a nested repo
+react-pdf-highlighter/   Vendored PDF highlighting source used by the app
 scripts/                 Local helper scripts
 docs/                    Architecture, runbook, and handoff notes
 ```

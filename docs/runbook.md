@@ -99,7 +99,7 @@ The chat lives in the lower part of the right workbench. Drag the horizontal han
 
 ## Safe Editing Notes
 
-- Do not delete or flatten `react-pdf-highlighter/.git`; it is a nested upstream project.
-- Prefer wrapping `react-pdf-highlighter` from `apps/desktop/src/pdf-highlighter.ts` instead of editing upstream internals.
+- `react-pdf-highlighter/` is vendored source in the main repository, not a submodule.
+- Prefer wrapping `react-pdf-highlighter` from `apps/desktop/src/pdf-highlighter.ts` before editing vendored internals.
 - Keep Electron IPC API minimal. Do not expose raw Node APIs to the renderer.
 - Keep provider-specific HTTP behavior in `apps/desktop/electron/ai.ts`.
