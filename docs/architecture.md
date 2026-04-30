@@ -43,9 +43,11 @@ Renderer React UI
 - `apps/desktop/src/components/Workbench.tsx`
   - Renders Paper, AI, and Settings in the right reserved workbench area.
 - `apps/desktop/src/components/AiWorkbench.tsx`
-  - Renders the right AI Workbench as a modular learning workspace.
+  - Renders the right AI Workbench as a page-style modular learning workspace.
   - Generates and validates `WorkspaceSpec` JSON from the newest selected PDF context item.
   - Provides Visual, Formula, Experiment, and Insight modules.
+  - Renders modules as scrollable page blocks with a compact block navigator.
+  - Defines the first-pass UI action and learning-event bridge for later left-agent control.
   - Uses local preview modules when AI generation fails or no passage is selected.
 - `apps/desktop/src/components/VisualLab.tsx`
   - Renders the Visual module inside the right AI Workbench.
@@ -112,17 +114,21 @@ Renderer React UI
 4. `AiWorkbench` asks the current AI provider for strict `WorkspaceSpec` JSON using `window.paperSuper.sendAiMessage`.
 5. The prompt intentionally asks for local safe modules only; it does not ask for HTML, JavaScript, CSS, SVG markup, or executable code.
 6. The renderer extracts and validates the JSON into safe local primitives.
-7. The Visual module passes a validated `VisualSpec` into `VisualLab`.
-8. The Formula module renders expression, plain-language explanation, variables, and derivation steps.
-9. The Experiment module renders parameter sliders, local computed metrics, a lightweight teaching curve, and observations.
-10. The Insight module renders key points, assumptions, limitations, and next questions.
-11. Visual A mode draws the scene with React/SVG instead of executing generated code.
-12. Visual A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
-13. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
-14. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
-15. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
-16. B-mode HTML demos remain isolated in the existing iframe sandbox and are no longer part of the main Workbench generation request.
-17. If generation fails or JSON is invalid, the panel keeps a local preview workspace and displays the error.
+7. `AiWorkbench` renders modules as a single scrollable page with Overview, Visual, Formula, Experiment, and Insight blocks.
+8. The compact navigator scrolls to each block rather than replacing content.
+9. `WorkspaceAction` supports first-pass UI intents such as `focus_block`, `focus_pdf_context`, `open_workspace`, and `open_learning_report`.
+10. Local learning events are dispatched as `papersuper:learning-event` for workspace generation, preview rendering, module views, UI actions, and slider changes.
+11. The Visual module passes a validated `VisualSpec` into `VisualLab`.
+12. The Formula module renders expression, plain-language explanation, variables, and derivation steps.
+13. The Experiment module renders parameter sliders, local computed metrics, a lightweight teaching curve, and observations.
+14. The Insight module renders key points, assumptions, limitations, and next questions.
+15. Visual A mode draws the scene with React/SVG instead of executing generated code.
+16. Visual A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
+17. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
+18. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
+19. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
+20. B-mode HTML demos remain isolated in the existing iframe sandbox and are no longer part of the main Workbench generation request.
+21. If generation fails or JSON is invalid, the panel keeps a local preview workspace and displays the error.
 
 ### Global UI Zoom
 
@@ -169,6 +175,8 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 - `AiStreamEvent`: `delta`, `done`, or `error`
 - `WorkspaceSpec`: modular right-side AI Workbench scene generated from selected paper context
 - `WorkspaceModule`: Visual, Formula, Experiment, or Insight module
+- `WorkspaceAction`: first-pass intent object for focusing blocks, selected PDF context, or future report views
+- `LearningEvent`: local event shape dispatched for future learning analytics and left-agent coordination
 - `VisualSpec`: structured visualization scene rendered locally in the right AI Workspace
 - `VisualHtmlDemo`: self-contained HTML/JS demo rendered only inside the Visual Lab iframe sandbox
 - `VisualSimulationSpec`: optional model hint for the local Visual Lab simulation engine
@@ -189,7 +197,7 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Collapsible left AI chat pane.
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
-- Right AI Workbench includes Visual, Formula, Experiment, and Insight modules.
+- Right AI Workbench includes a page-style Overview plus Visual, Formula, Experiment, and Insight blocks.
 - The Visual module includes Visual Lab with A/B mode switching between local SVG rendering and sandboxed HTML/JS demos.
 - A-mode local SVG rendering can combine flow nodes, edges, simulation layers, and declarative visual elements for non-flowchart diagrams.
 - Draggable vertical split handles between left/PDF and PDF/right zones.

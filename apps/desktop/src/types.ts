@@ -160,12 +160,15 @@ export interface VisualSpec {
 
 export type WorkspaceModuleType = "visual" | "formula" | "experiment" | "insight";
 
+export type WorkspaceBlockType = WorkspaceModuleType | "overview";
+
 export interface WorkspaceSpec {
   id: string;
   title: string;
   summary: string;
   sourceContextId?: string;
   modules: WorkspaceModule[];
+  actions?: WorkspaceAction[];
 }
 
 export interface WorkspaceModuleBase {
@@ -228,6 +231,44 @@ export type WorkspaceModule =
   | FormulaWorkspaceModule
   | ExperimentWorkspaceModule
   | InsightWorkspaceModule;
+
+export type WorkspaceAction =
+  | {
+      type: "open_workspace";
+      workspaceId: string;
+    }
+  | {
+      type: "focus_block";
+      blockId: string;
+    }
+  | {
+      type: "focus_pdf_context";
+      contextId: string;
+      highlightId?: string;
+    }
+  | {
+      type: "open_learning_report";
+    };
+
+export type LearningEventType =
+  | "workspace_generate"
+  | "workspace_preview"
+  | "workspace_action"
+  | "module_view"
+  | "slider_change"
+  | "formula_view"
+  | "insight_view";
+
+export interface LearningEvent {
+  id: string;
+  type: LearningEventType;
+  paperId: string;
+  contextId?: string;
+  moduleId?: string;
+  moduleType?: WorkspaceModuleType;
+  createdAt: string;
+  metadata?: Record<string, string | number | boolean | undefined>;
+}
 
 export type AiStreamEvent =
   | {

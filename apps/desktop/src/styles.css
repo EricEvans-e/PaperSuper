@@ -731,19 +731,24 @@ select:disabled {
 }
 
 .aiWorkbench {
-  display: grid;
-  grid-template-rows: auto auto minmax(560px, 1fr) auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
   gap: 8px;
   min-height: 0;
-  height: 100%;
-  overflow: auto;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 2px;
+  scrollbar-gutter: stable;
 }
 
 .workspaceHeader,
 .workspaceTabs,
 .workspaceStatus,
-.workspaceModuleShell {
+.workspaceModuleShell,
+.workspaceOverviewBlock,
+.workspaceBlock {
   border: 1px solid #292b31;
   border-radius: 6px;
   background: #18191d;
@@ -751,6 +756,7 @@ select:disabled {
 
 .workspaceHeader {
   display: flex;
+  flex: 0 0 auto;
   align-items: start;
   justify-content: space-between;
   gap: 8px;
@@ -796,9 +802,16 @@ select:disabled {
 
 .workspaceTabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 0 0 auto;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 3px;
   padding: 3px;
+}
+
+.workspacePageNav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .workspaceTab {
@@ -841,8 +854,68 @@ select:disabled {
   padding: 0;
 }
 
+.workspacePage {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 10px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.workspaceOverviewBlock,
+.workspaceBlock {
+  min-width: 0;
+  scroll-margin-top: 42px;
+  overflow: visible;
+}
+
+.workspaceOverviewBlock {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+}
+
+.workspaceActionList {
+  display: grid;
+  gap: 6px;
+}
+
+.workspaceActionButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #30343d;
+  border-radius: 6px;
+  color: #d8dbe1;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-align: left;
+  background: #111319;
+  cursor: pointer;
+}
+
+.workspaceActionButton:hover {
+  color: #f5f6f8;
+  border-color: rgba(88, 192, 140, 0.48);
+  background: #171b22;
+}
+
+.workspaceActionButton svg {
+  color: #58c08c;
+  flex: 0 0 auto;
+}
+
+.workspaceActionButton span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workspaceStatus {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
   min-height: 30px;
@@ -870,10 +943,23 @@ select:disabled {
   display: grid;
   align-content: start;
   gap: 9px;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 10px;
+}
+
+.workspaceBlock > .visualLab {
+  height: auto;
+  min-height: 760px;
+}
+
+.workspaceBlock .visualHero {
+  min-height: 470px;
+}
+
+.workspaceBlock .visualCanvas {
+  min-height: 320px;
 }
 
 .moduleIntro {

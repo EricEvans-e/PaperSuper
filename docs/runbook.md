@@ -52,16 +52,17 @@ npm run preview
 18. Configure one AI provider and send a short prompt from the left AI chat.
 19. Open the AI activity in the right workbench and confirm the AI Workbench renders a preview workspace.
 20. Confirm the right workbench has a visible scrollbar when content exceeds the available height.
-21. Switch between Visual, Formula, Experiment, and Insight tabs.
+21. Use the compact block navigator and confirm it scrolls to Overview, Visual, Formula, Experiment, and Insight blocks.
 22. In the Visual module A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
 23. In Visual A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
 24. In the Formula module, confirm expression, variables, and derivation steps fit and scroll if needed.
 25. In the Experiment module, move sliders and confirm metrics plus the teaching curve update locally.
 26. In the Insight module, confirm key points, assumptions, limitations, and next questions are visible.
-27. Alt-drag a paragraph/table text region, click `Generate`, and confirm the AI Workbench requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
-28. Ask the AI chat to translate or explain the selected context.
-29. Confirm streaming output appears as Markdown.
-30. Run `npm run build`.
+27. Click an Overview suggested action and confirm the page scrolls to the target block.
+28. Alt-drag a paragraph/table text region, click `Generate`, and confirm the AI Workbench requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
+29. Ask the AI chat to translate or explain the selected context.
+30. Confirm streaming output appears as Markdown.
+31. Run `npm run build`.
 
 ## AI Configuration
 
@@ -125,7 +126,20 @@ The chat lives in the collapsible left pane. Use the chat button in the far-left
 
 ### AI Workbench content is cut off
 
-The right workbench should scroll as a whole. Check `.aiWorkbench` has `overflow: auto` and `.workspaceModuleShell` does not clip taller module content.
+The right workbench should scroll as a whole. Check `.aiWorkbench` has `overflow: auto`, `.workspacePage` renders block content, and workspace blocks do not clip taller module content.
+
+### AI Workbench block navigation does not move
+
+Check:
+
+- Each module section uses its module id as the DOM `id`.
+- The Overview section uses `workspace-overview`.
+- `focusBlock()` calls `scrollIntoView`.
+- The right workbench outer container can scroll.
+
+### Learning events are not visible in development
+
+In development, `AiWorkbench` dispatches `papersuper:learning-event` browser events and logs them with `console.debug`. Check the browser devtools console and event listeners before adding persistence.
 
 ### Visual module sliders do not change the scene
 

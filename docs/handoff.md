@@ -27,6 +27,7 @@ Last updated: 2026-04-30
 - Right AI Workbench with modular Visual, Formula, Experiment, and Insight panels generated from selected paper context.
 - Main AI Workbench generation now requests structured `WorkspaceSpec` JSON only, keeping HTML/JS sandbox demos out of the primary request path to reduce timeouts.
 - Right AI Workbench content scrolls as a whole so taller modules are not clipped.
+- The AI activity panel keeps the header fixed in the right workbench, then lets `AiWorkbench` own the remaining-height vertical scroller; workspace blocks and Visual Lab content should not reintroduce fixed `height: 100%` clipping inside that scroll flow.
 - Visual module with A/B output: validated AI-generated `VisualSpec` JSON rendered locally with React/SVG, plus self-contained HTML/JS demos rendered only inside an iframe sandbox with CSP when provided.
 - Visual Lab A mode now uses a local parameter-driven simulation engine, so slider changes recompute and redraw teaching visuals such as K/V cache blocks, token interleaving, transfer blocks, GPU lanes, metric cards, and flow speed.
 - Visual Lab A mode also supports declarative `visualElements`, allowing generated scenes to render richer non-flowchart diagrams such as architecture blocks, matrices, layer stacks, formulas, bars, brackets, axes, annotations, and arrows.

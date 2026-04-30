@@ -38,7 +38,8 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 - Keep provider HTTP logic in `apps/desktop/electron/ai.ts`.
 - Keep global app zoom in Electron main via `webContents.setZoomFactor`; renderer may call the minimal `adjustUiZoom` preload fallback for keyboard layout compatibility.
 - Keep PDF-only zoom in the renderer/PDF reader path via `pdfScaleValue`; do not mix it with global app zoom.
-- Keep the right side organized around `WorkspaceSpec` modules in `AiWorkbench`; `VisualLab` is the visual module, not the whole right-side product.
+- Keep the right side organized around page-style `WorkspaceSpec` modules in `AiWorkbench`; `VisualLab` is the visual block, not the whole right-side product.
+- `AiWorkbench` has a first-pass UI action/event protocol: `WorkspaceAction` describes UI intents, and learning events are dispatched as `papersuper:learning-event` browser events.
 - Keep right-side structured visualization work in renderer-owned `VisualSpec` data and local React/SVG rendering.
 - A-mode `VisualSpec` can include both legacy `nodes` / `edges` and richer declarative `visualElements`; prefer adding safe SVG primitives over executing generated code.
 - Visual Lab A mode parameters should flow through `computeVisualSimulation`; sliders must visibly recompute local state, not only update numeric labels.
@@ -101,7 +102,7 @@ The current UI is a dark IDE shell with:
 - collapsible AI chat pane on the left, toggled from the activity bar
 - PDF pane in the center
 - reserved workbench pane on the right for Paper/AI/Settings tools
-- right AI Workbench renders modular Visual, Formula, Experiment, and Insight panels; the Visual panel contains Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, declarative SVG visual elements, and iframe sandbox HTML demos
+- right AI Workbench renders a page-style workspace with Visual, Formula, Experiment, and Insight blocks plus compact block navigation; the Visual block contains Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, declarative SVG visual elements, and iframe sandbox HTML demos
 - draggable vertical handles between the three zones
 - compact AI chat styling at narrow widths, with drag-to-collapse and same-drag reopen behavior
 

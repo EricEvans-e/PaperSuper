@@ -2,6 +2,7 @@ import {
   Beaker,
   BookOpenText,
   Brain,
+  ChevronDown,
   FunctionSquare,
   Lightbulb,
   RefreshCcw,
@@ -14,10 +15,12 @@ import type {
   ExperimentWorkspaceModule,
   FormulaWorkspaceModule,
   InsightWorkspaceModule,
+  LearningEvent,
   ModelConfig,
   PaperDocument,
   VisualParameter,
   VisualSpec,
+  WorkspaceAction,
   WorkspaceModule,
   WorkspaceModuleType,
   WorkspaceSpec,
@@ -34,12 +37,13 @@ interface AiWorkbenchProps {
 type GenerationStatus = "idle" | "loading" | "done" | "error";
 
 const moduleMeta: Record<
-  WorkspaceModuleType,
+  WorkspaceModuleType | "overview",
   {
     label: string;
     icon: typeof Brain;
   }
 > = {
+  overview: { label: "Overview", icon: BookOpenText },
   visual: { label: "Visual", icon: Brain },
   formula: { label: "Formula", icon: FunctionSquare },
   experiment: { label: "Experiment", icon: Beaker },
@@ -112,6 +116,72 @@ const normalizeStringList = (
     .map((item, index) => safeString(item, fallback[index] ?? "Item", maxLength))
     .filter(Boolean);
 
+const recordLearningEvent = (event: LearningEvent) => {
+  window.dispatchEvent(
+    new CustomEvent("papersuper:learning-event", {
+      detail: event,
+    }),
+  );
+
+  if (import.meta.env.DEV) {
+    console.debug("PaperSuper learning event", event);
+  }
+};
+
+const normalizeActions = (
+  value: unknown,
+  workspaceId: string,
+  modules: WorkspaceModule[],
+  activeContext: AiContextItem,
+): WorkspaceAction[] => {
+  const moduleIds = new Set(modules.map((module) => module.id));
+  const actions = (Array.isArray(value) ? value : [])
+    .slice(0, 4)
+    .map((item): WorkspaceAction | null => {
+      const action = item as Partial<WorkspaceAction> & Record<string, unknown>;
+
+      if (action.type === "focus_block") {
+        const blockId = safeId(action.blockId, "");
+        if (!moduleIds.has(blockId)) {
+          return null;
+        }
+
+        return { type: "focus_block", blockId };
+      }
+
+      if (action.type === "focus_pdf_context") {
+        return {
+          type: "focus_pdf_context",
+          contextId: safeId(action.contextId, activeContext.id),
+          highlightId: safeId(action.highlightId, "") || undefined,
+        };
+      }
+
+      if (action.type === "open_learning_report") {
+        return { type: "open_learning_report" };
+      }
+
+      if (action.type === "open_workspace") {
+        return {
+          type: "open_workspace",
+          workspaceId: safeId(action.workspaceId, workspaceId),
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean) as WorkspaceAction[];
+
+  return actions.length > 0
+    ? actions
+    : [
+        {
+          type: "focus_block",
+          blockId: modules[0]?.id ?? "visual-module",
+        },
+      ];
+};
+
 const buildWorkspacePrompt = ({
   activeContext,
   paper,
@@ -128,6 +198,7 @@ const buildWorkspacePrompt = ({
     "{",
     '  "title": string,',
     '  "summary": string,',
+    '  "actions": [{"type": "open_workspace" | "focus_block" | "focus_pdf_context" | "open_learning_report", "workspaceId": string, "blockId": string, "contextId": string, "highlightId": string}],',
     '  "modules": [',
     '    {"id": string, "type": "visual", "title": string, "summary": string, "visual": VisualSpec},',
     '    {"id": string, "type": "formula", "title": string, "summary": string, "formula": {"expression": string, "plainLanguage": string, "variables": [{"symbol": string, "meaning": string, "role": string}], "derivationSteps": [{"title": string, "detail": string}]}},',
@@ -147,6 +218,7 @@ const buildWorkspacePrompt = ({
     "- Include one formula module if the passage contains formulas, algorithmic transformations, variables, or tensor operations.",
     "- Include one experiment module with 2 to 4 meaningful sliders and 2 to 4 metrics.",
     "- Include one insight module that explains contribution, assumptions, limitations, and next questions.",
+    "- Include 1 to 3 suggested actions. Use focus_block to guide the learner to the most important module.",
     "- Keep content concise and useful for learning the selected paper passage.",
     "",
     `Paper title: ${paper.title || "Untitled PDF"}`,
@@ -275,6 +347,10 @@ const createFallbackWorkspaceSpec = (
           ],
         },
       },
+    ],
+    actions: [
+      { type: "focus_block", blockId: "visual-module" },
+      { type: "focus_block", blockId: "experiment-module" },
     ],
   };
 };
@@ -460,8 +536,10 @@ const normalizeWorkspaceSpec = (
     modules.push(normalizeInsightModule({}, modules.length));
   }
 
+  const workspaceId = `workspace-${activeContext.id}-${Date.now()}`;
+
   return {
-    id: `workspace-${activeContext.id}-${Date.now()}`,
+    id: workspaceId,
     title: safeString(source.title, "AI Workbench", 72),
     summary: safeString(
       source.summary,
@@ -470,6 +548,7 @@ const normalizeWorkspaceSpec = (
     ),
     sourceContextId: activeContext.id,
     modules: modules.slice(0, 8),
+    actions: normalizeActions(source.actions, workspaceId, modules, activeContext),
   };
 };
 
@@ -485,14 +564,9 @@ export function AiWorkbench({
     [activeContext, revision],
   );
   const [workspace, setWorkspace] = useState<WorkspaceSpec | null>(null);
-  const [activeModuleId, setActiveModuleId] = useState<string>(
-    fallbackWorkspace.modules[0].id,
-  );
   const [status, setStatus] = useState<GenerationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const spec = workspace ?? fallbackWorkspace;
-  const activeModule =
-    spec.modules.find((module) => module.id === activeModuleId) ?? spec.modules[0];
 
   useEffect(() => {
     setWorkspace(null);
@@ -502,8 +576,43 @@ export function AiWorkbench({
   }, [activeContext?.id]);
 
   useEffect(() => {
-    setActiveModuleId(spec.modules[0]?.id ?? "");
-  }, [spec.id]);
+    recordLearningEvent({
+      id: makeId(),
+      type: workspace ? "workspace_generate" : "workspace_preview",
+      paperId: paper.id,
+      contextId: activeContext?.id,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        workspaceId: spec.id,
+        moduleCount: spec.modules.length,
+      },
+    });
+  }, [activeContext?.id, paper.id, spec.id, spec.modules.length, workspace]);
+
+  const focusBlock = (blockId: string) => {
+    document.getElementById(blockId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const runAction = (action: WorkspaceAction) => {
+    recordLearningEvent({
+      id: makeId(),
+      type: "workspace_action",
+      paperId: paper.id,
+      contextId: activeContext?.id,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        actionType: action.type,
+        blockId: action.type === "focus_block" ? action.blockId : undefined,
+      },
+    });
+
+    if (action.type === "focus_block") {
+      focusBlock(action.blockId);
+    }
+  };
 
   const generateWorkspace = async () => {
     if (!activeContext?.text.trim()) {
@@ -542,7 +651,6 @@ export function AiWorkbench({
       const rawSpec = extractJsonObject(response?.content || "");
       const nextWorkspace = normalizeWorkspaceSpec(rawSpec, activeContext);
       setWorkspace(nextWorkspace);
-      setActiveModuleId(nextWorkspace.modules[0].id);
       setStatus("done");
     } catch (generationError) {
       const message =
@@ -589,16 +697,24 @@ export function AiWorkbench({
         </button>
       </section>
 
-      <nav className="workspaceTabs" aria-label="AI workspace modules">
+      <nav className="workspaceTabs workspacePageNav" aria-label="AI workspace blocks">
+        <button
+          type="button"
+          className="workspaceTab active"
+          onClick={() => focusBlock("workspace-overview")}
+        >
+          <BookOpenText size={13} />
+          <span>Overview</span>
+        </button>
         {spec.modules.map((module) => {
           const meta = moduleMeta[module.type];
           const Icon = meta.icon;
           return (
             <button
               type="button"
-              className={`workspaceTab ${module.id === activeModule.id ? "active" : ""}`}
+              className="workspaceTab"
               key={module.id}
-              onClick={() => setActiveModuleId(module.id)}
+              onClick={() => focusBlock(module.id)}
             >
               <Icon size={13} />
               <span>{meta.label}</span>
@@ -607,14 +723,13 @@ export function AiWorkbench({
         })}
       </nav>
 
-      <section className="workspaceModuleShell">
-        <WorkspaceModuleView
-          contextItems={contextItems}
-          module={activeModule}
-          modelConfig={modelConfig}
-          paper={paper}
-        />
-      </section>
+      <WorkspacePageRenderer
+        contextItems={contextItems}
+        modelConfig={modelConfig}
+        onAction={runAction}
+        paper={paper}
+        workspace={spec}
+      />
 
       <section className="workspaceStatus">
         <BookOpenText size={13} />
@@ -623,6 +738,74 @@ export function AiWorkbench({
     </div>
   );
 }
+
+function WorkspacePageRenderer({
+  contextItems,
+  modelConfig,
+  onAction,
+  paper,
+  workspace,
+}: {
+  contextItems: AiContextItem[];
+  modelConfig: ModelConfig;
+  onAction: (action: WorkspaceAction) => void;
+  paper: PaperDocument;
+  workspace: WorkspaceSpec;
+}) {
+  return (
+    <section className="workspacePage">
+      <article className="workspaceOverviewBlock" id="workspace-overview">
+        <div className="moduleIntro">
+          <span>Overview</span>
+          <strong>{workspace.title}</strong>
+          <p>{workspace.summary}</p>
+        </div>
+        {workspace.actions?.length ? (
+          <div className="workspaceActionList">
+            {workspace.actions.map((action, index) => (
+              <button
+                type="button"
+                className="workspaceActionButton"
+                key={`${action.type}-${index}`}
+                onClick={() => onAction(action)}
+              >
+                <ChevronDown size={13} />
+                <span>{actionLabel(action, workspace.modules)}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </article>
+
+      {workspace.modules.map((module) => (
+        <section className="workspaceBlock" id={module.id} key={module.id}>
+          <WorkspaceModuleView
+            contextItems={contextItems}
+            module={module}
+            modelConfig={modelConfig}
+            paper={paper}
+          />
+        </section>
+      ))}
+    </section>
+  );
+}
+
+const actionLabel = (action: WorkspaceAction, modules: WorkspaceModule[]) => {
+  if (action.type === "focus_block") {
+    return `跳转到 ${modules.find((module) => module.id === action.blockId)?.title ?? "模块"}`;
+  }
+
+  if (action.type === "focus_pdf_context") {
+    return "回到论文选区";
+  }
+
+  if (action.type === "open_learning_report") {
+    return "打开学习报告";
+  }
+
+  return "查看工作区";
+};
 
 function WorkspaceModuleView({
   contextItems,
@@ -635,6 +818,25 @@ function WorkspaceModuleView({
   module: WorkspaceModule;
   paper: PaperDocument;
 }) {
+  useEffect(() => {
+    recordLearningEvent({
+      id: makeId(),
+      type:
+        module.type === "formula"
+          ? "formula_view"
+          : module.type === "insight"
+            ? "insight_view"
+            : "module_view",
+      paperId: paper.id,
+      moduleId: module.id,
+      moduleType: module.type,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        title: module.title,
+      },
+    });
+  }, [module.id, module.title, module.type, paper.id]);
+
   if (module.type === "visual") {
     return (
       <VisualLab
@@ -652,7 +854,7 @@ function WorkspaceModuleView({
   }
 
   if (module.type === "experiment") {
-    return <ExperimentModuleView module={module} />;
+    return <ExperimentModuleView module={module} paperId={paper.id} />;
   }
 
   return <InsightModuleView module={module} />;
@@ -688,7 +890,13 @@ function FormulaModuleView({ module }: { module: FormulaWorkspaceModule }) {
   );
 }
 
-function ExperimentModuleView({ module }: { module: ExperimentWorkspaceModule }) {
+function ExperimentModuleView({
+  module,
+  paperId,
+}: {
+  module: ExperimentWorkspaceModule;
+  paperId: string;
+}) {
   const [values, setValues] = useState<Record<string, number>>(() =>
     Object.fromEntries(
       module.experiment.parameters.map((parameter) => [
@@ -768,12 +976,25 @@ function ExperimentModuleView({ module }: { module: ExperimentWorkspaceModule })
               max={parameter.max}
               step={parameter.step}
               value={values[parameter.id] ?? parameter.defaultValue}
-              onChange={(event) =>
+              onChange={(event) => {
+                const nextValue = Number(event.target.value);
                 setValues((current) => ({
                   ...current,
-                  [parameter.id]: Number(event.target.value),
-                }))
-              }
+                  [parameter.id]: nextValue,
+                }));
+                recordLearningEvent({
+                  id: makeId(),
+                  type: "slider_change",
+                  paperId,
+                  moduleId: module.id,
+                  moduleType: module.type,
+                  createdAt: new Date().toISOString(),
+                  metadata: {
+                    parameterId: parameter.id,
+                    value: nextValue,
+                  },
+                });
+              }}
             />
             <strong>
               {values[parameter.id] ?? parameter.defaultValue}

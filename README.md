@@ -28,11 +28,14 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
 - Three-zone workspace: collapsible left AI chat, central PDF reader, and right interaction/reserved panel.
 - Left AI chat width and right reserved panel width can be adjusted manually and are persisted locally.
 - The left AI chat uses a compact layout at narrow widths, auto-collapses below the threshold, and can reopen during the same drag if pulled back right.
-- Right AI Workbench renders modular learning panels generated from the selected paper context:
+- Right AI Workbench renders a page-style learning workspace generated from the selected paper context:
+  - A compact block navigator jumps to page sections instead of hiding modules behind tabs.
   - Visual module: structure diagrams, animations, parameters, and optional sandbox demo.
   - Formula module: expression, variable meanings, and derivation steps.
   - Experiment module: sliders, computed teaching metrics, curves, and observations.
   - Insight module: key points, assumptions, limitations, and next questions.
+  - First-pass UI actions support focusing workspace blocks, returning to selected PDF context later, and opening a future learning report.
+  - Lightweight learning events are dispatched for workspace generation, module views, actions, and slider changes.
 - The Visual module includes Visual Lab A/B output:
   - A mode renders validated AI-generated `VisualSpec` data with local React/SVG playback, parameter sliders, and a local simulation engine that recomputes blocks, active windows, GPU lanes, metrics, and animation speed as sliders move.
   - A mode also supports safe declarative `visualElements` for richer diagrams such as model architecture blocks, matrices, layer stacks, formula callouts, brackets, bars, axes, annotations, and arrows.
