@@ -16,6 +16,22 @@ import { makeId } from "./utils";
 
 const SAMPLE_PDF_URL = "https://arxiv.org/pdf/1708.08021";
 const STORAGE_MODEL_CONFIG = "papersuper:model-config";
+const STORAGE_WORKSPACE_LAYOUT = "papersuper:workspace-layout";
+
+const DEFAULT_CHAT_WIDTH = 340;
+const DEFAULT_RIGHT_WIDTH = 340;
+const MIN_CHAT_WIDTH = 260;
+const MAX_CHAT_WIDTH = 560;
+const MIN_PDF_WIDTH = 420;
+const MIN_RIGHT_WIDTH = 260;
+const MAX_RIGHT_WIDTH = 600;
+const SPLIT_HANDLE_WIDTH = 6;
+
+interface WorkspaceLayout {
+  isChatOpen: boolean;
+  chatWidth: number;
+  rightWidth: number;
+}
 
 const defaultModelConfig: ModelConfig = {
   provider: "openai-chat",
@@ -52,7 +68,38 @@ const createSamplePaper = (): PaperDocument => ({
   openedAt: new Date().toISOString(),
 });
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), Math.max(min, max));
+
+const readStoredWorkspaceLayout = (): WorkspaceLayout => {
+  try {
+    const raw = localStorage.getItem(STORAGE_WORKSPACE_LAYOUT);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      isChatOpen:
+        typeof parsed.isChatOpen === "boolean" ? parsed.isChatOpen : true,
+      chatWidth: clamp(
+        Number(parsed.chatWidth) || DEFAULT_CHAT_WIDTH,
+        MIN_CHAT_WIDTH,
+        MAX_CHAT_WIDTH,
+      ),
+      rightWidth: clamp(
+        Number(parsed.rightWidth) || DEFAULT_RIGHT_WIDTH,
+        MIN_RIGHT_WIDTH,
+        MAX_RIGHT_WIDTH,
+      ),
+    };
+  } catch {
+    return {
+      isChatOpen: true,
+      chatWidth: DEFAULT_CHAT_WIDTH,
+      rightWidth: DEFAULT_RIGHT_WIDTH,
+    };
+  }
+};
+
 export function App() {
+  const storedLayout = useMemo(() => readStoredWorkspaceLayout(), []);
   const [activity, setActivity] = useState<ActivityId>("ai");
   const [paper, setPaper] = useState<PaperDocument>(() => createSamplePaper());
   const [pdfUrl, setPdfUrl] = useState(SAMPLE_PDF_URL);
@@ -70,14 +117,24 @@ export function App() {
   const [modelConfig, setModelConfig] = useState<ModelConfig>(() =>
     readStoredModelConfig(),
   );
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(storedLayout.isChatOpen);
+  const [chatWidth, setChatWidth] = useState<number>(storedLayout.chatWidth);
+  const [rightWidth, setRightWidth] = useState<number>(storedLayout.rightWidth);
   const [openError, setOpenError] = useState<string | null>(null);
 
+  const workspaceRef = useRef<HTMLElement>(null);
   const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_MODEL_CONFIG, JSON.stringify(modelConfig));
   }, [modelConfig]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_WORKSPACE_LAYOUT,
+      JSON.stringify({ isChatOpen, chatWidth, rightWidth }),
+    );
+  }, [chatWidth, isChatOpen, rightWidth]);
 
   useEffect(
     () => () => {
@@ -178,13 +235,72 @@ export function App() {
     );
   };
 
+  const handleLeftResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const container = workspaceRef.current;
+    if (!container) {
+      return;
+    }
+
+    const startX = event.clientX;
+    const startWidth = chatWidth;
+    const containerWidth = container.getBoundingClientRect().width;
+    const maxWidth =
+      containerWidth - rightWidth - MIN_PDF_WIDTH - SPLIT_HANDLE_WIDTH * 2;
+
+    const move = (pointerEvent: PointerEvent) => {
+      const nextWidth = startWidth + pointerEvent.clientX - startX;
+      setChatWidth(clamp(nextWidth, MIN_CHAT_WIDTH, Math.min(MAX_CHAT_WIDTH, maxWidth)));
+    };
+
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      document.body.classList.remove("isResizingColumns");
+    };
+
+    document.body.classList.add("isResizingColumns");
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+  };
+
+  const handleRightResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const container = workspaceRef.current;
+    if (!container) {
+      return;
+    }
+
+    const startX = event.clientX;
+    const startWidth = rightWidth;
+    const containerWidth = container.getBoundingClientRect().width;
+    const leftBlockWidth = isChatOpen ? chatWidth + SPLIT_HANDLE_WIDTH : 0;
+    const maxWidth =
+      containerWidth - leftBlockWidth - MIN_PDF_WIDTH - SPLIT_HANDLE_WIDTH;
+
+    const move = (pointerEvent: PointerEvent) => {
+      const nextWidth = startWidth - (pointerEvent.clientX - startX);
+      setRightWidth(clamp(nextWidth, MIN_RIGHT_WIDTH, Math.min(MAX_RIGHT_WIDTH, maxWidth)));
+    };
+
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      document.body.classList.remove("isResizingColumns");
+    };
+
+    document.body.classList.add("isResizingColumns");
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+  };
+
   const workspaceStyle = useMemo(
     () => ({
       gridTemplateColumns: isChatOpen
-        ? "minmax(300px, 340px) minmax(0, 1fr) minmax(280px, 360px)"
-        : "minmax(0, 1fr) minmax(280px, 360px)",
+        ? `${chatWidth}px ${SPLIT_HANDLE_WIDTH}px minmax(${MIN_PDF_WIDTH}px, 1fr) ${SPLIT_HANDLE_WIDTH}px ${rightWidth}px`
+        : `minmax(${MIN_PDF_WIDTH}px, 1fr) ${SPLIT_HANDLE_WIDTH}px ${rightWidth}px`,
     }),
-    [isChatOpen],
+    [chatWidth, isChatOpen, rightWidth],
   );
 
   return (
@@ -197,7 +313,11 @@ export function App() {
       />
       <div className="appMain">
         <TitleBar paper={paper} onOpenPdf={openPdfFile} openError={openError} />
-        <main className="workspace threeZoneWorkspace" style={workspaceStyle}>
+        <main
+          className="workspace threeZoneWorkspace"
+          style={workspaceStyle}
+          ref={workspaceRef}
+        >
           {isChatOpen ? (
             <AiChatPanel
               paper={paper}
@@ -205,6 +325,15 @@ export function App() {
               messages={messages}
               modelConfig={modelConfig}
               onMessagesChange={setMessages}
+            />
+          ) : null}
+          {isChatOpen ? (
+            <div
+              className="workspaceSplitHandle"
+              role="separator"
+              aria-label="Resize AI chat and PDF panes"
+              aria-orientation="vertical"
+              onPointerDown={handleLeftResizeStart}
             />
           ) : null}
           <PdfReaderPane
@@ -215,6 +344,13 @@ export function App() {
             onAddContext={addContextItem}
             onRemoveContextHighlight={removeContextHighlight}
             onClearContextHighlights={clearContextHighlights}
+          />
+          <div
+            className="workspaceSplitHandle"
+            role="separator"
+            aria-label="Resize PDF and right workbench panes"
+            aria-orientation="vertical"
+            onPointerDown={handleRightResizeStart}
           />
           <Workbench
             activity={activity}

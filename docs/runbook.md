@@ -42,9 +42,11 @@ npm run preview
 8. Open a local PDF with the title-bar Open PDF button.
 9. Switch between Paper, AI, and Settings activities.
 10. Toggle the left AI chat from the activity bar and confirm the PDF pane expands/collapses cleanly.
-11. Configure one AI provider and send a short prompt from the left AI chat.
-12. Confirm streaming output appears as Markdown.
-13. Run `npm run build`.
+11. Drag both vertical split handles and confirm the left chat, center PDF, and right workbench widths adjust without overlap.
+12. Refresh/restart and confirm the adjusted workspace widths are retained.
+13. Configure one AI provider and send a short prompt from the left AI chat.
+14. Confirm streaming output appears as Markdown.
+15. Run `npm run build`.
 
 ## AI Configuration
 
@@ -96,7 +98,7 @@ Check:
 
 ### AI chat area is hidden
 
-The chat lives in the collapsible left pane. Use the chat button in the far-left activity bar to show or hide it. If it still disappears, check the `threeZoneWorkspace` and `aiChatPanel` styles.
+The chat lives in the collapsible left pane. Use the chat button in the far-left activity bar to show or hide it. Drag the vertical split handles to rebalance the three zones. If it still disappears, check the `threeZoneWorkspace`, `workspaceSplitHandle`, and `aiChatPanel` styles.
 
 ## Safe Editing Notes
 

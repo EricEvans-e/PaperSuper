@@ -298,6 +298,40 @@ select:disabled {
   overflow: hidden;
 }
 
+.workspaceSplitHandle {
+  position: relative;
+  z-index: 2;
+  background: #101112;
+  cursor: col-resize;
+}
+
+.workspaceSplitHandle::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  content: "";
+  background: #2b2d32;
+  transition: background 120ms ease;
+}
+
+.workspaceSplitHandle:hover::before,
+.isResizingColumns .workspaceSplitHandle::before {
+  background: #58c08c;
+}
+
+.isResizingColumns {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.isResizingColumns iframe,
+.isResizingColumns canvas,
+.isResizingColumns .pdfSurface {
+  pointer-events: none;
+}
+
 .pdfPane,
 .workbenchPanel,
 .workbenchDock,
@@ -309,8 +343,6 @@ select:disabled {
 .pdfPane {
   display: grid;
   grid-template-rows: 48px minmax(0, 1fr);
-  border-right: 1px solid #24262b;
-  border-left: 1px solid #24262b;
   background: #f4f5f2;
   color: #1f2329;
 }
@@ -368,10 +400,6 @@ select:disabled {
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
   background: #141416;
-}
-
-.reservedDock {
-  border-left: 1px solid #24262b;
 }
 
 .workbenchTopSlot {

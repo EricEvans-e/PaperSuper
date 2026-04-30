@@ -31,8 +31,9 @@ Renderer React UI
   - Sends requests to OpenAI Chat Completions, OpenAI Responses, or Anthropic Messages.
   - Parses normal JSON responses and SSE streaming responses.
 - `apps/desktop/src/App.tsx`
-  - Owns top-level renderer state: active activity, current paper, PDF URL, highlights, selected AI context, messages, model config, and whether the left AI chat pane is open.
-  - Renders the three-zone workspace grid: AI chat, PDF reader, and right workbench.
+  - Owns top-level renderer state: active activity, current paper, PDF URL, highlights, selected AI context, messages, model config, and workspace layout.
+  - Renders the three-zone workspace grid: AI chat, PDF reader, split handles, and right workbench.
+  - Persists chat visibility, left chat width, and right workbench width in renderer `localStorage`.
 - `apps/desktop/src/components/PdfReaderPane.tsx`
   - Loads PDF.js worker.
   - Wraps `react-pdf-highlighter`.
@@ -109,5 +110,6 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Collapsible left AI chat pane.
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
+- Draggable vertical split handles between left/PDF and PDF/right zones.
 
-The AI chat has streaming and Markdown support. As of 2026-04-30, it is implemented as a collapsible left pane controlled by the activity bar.
+The AI chat has streaming and Markdown support. As of 2026-04-30, it is implemented as a collapsible and manually resizable left pane controlled by the activity bar.

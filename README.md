@@ -21,6 +21,7 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
 - AI answers are rendered as Markdown with GFM support.
 - Streaming AI output is wired through Electron IPC events.
 - Three-zone workspace: collapsible left AI chat, central PDF reader, and right interaction/reserved panel.
+- Left AI chat width and right reserved panel width can be adjusted manually and are persisted locally.
 
 ## Setup
 

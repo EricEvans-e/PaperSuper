@@ -66,5 +66,6 @@ The current UI is a dark IDE shell with:
 - collapsible AI chat pane on the left, toggled from the activity bar
 - PDF pane in the center
 - reserved workbench pane on the right for Paper/AI/Settings tools
+- draggable vertical handles between the three zones
 
-As of 2026-04-30, AI chat is no longer inside the right workbench. `App` owns the three-zone grid and renders `AiChatPanel` as the collapsible left pane.
+As of 2026-04-30, AI chat is no longer inside the right workbench. `App` owns the three-zone grid, renders `AiChatPanel` as the collapsible left pane, and persists workspace widths in `localStorage` under `papersuper:workspace-layout`.
