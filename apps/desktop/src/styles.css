@@ -515,55 +515,6 @@ select:disabled {
   background: #58c08c;
 }
 
-.summaryGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.summaryCard {
-  display: flex;
-  gap: 8px;
-  min-width: 0;
-  padding: 9px;
-  border: 1px solid #292b31;
-  border-radius: 6px;
-  color: #c6cbd4;
-  background: #18191d;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease;
-}
-
-.summaryCard:hover {
-  border-color: #353842;
-  background: #1d1e23;
-}
-
-.summaryCard svg {
-  flex: 0 0 auto;
-  color: #6f9cff;
-}
-
-.summaryCard div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.summaryCard strong {
-  color: #f5f6f8;
-  font-size: 12px;
-}
-
-.summaryCard span {
-  overflow: hidden;
-  color: #a1a6af;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .chatCard {
   position: relative;
   display: grid;
@@ -903,7 +854,4 @@ select.textInput {
     grid-template-columns: minmax(180px, 250px) minmax(0, 1fr) auto;
   }
 
-  .summaryGrid {
-    grid-template-columns: 1fr;
-  }
 }

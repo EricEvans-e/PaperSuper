@@ -20,11 +20,11 @@ const STORAGE_WORKSPACE_LAYOUT = "papersuper:workspace-layout";
 
 const DEFAULT_CHAT_WIDTH = 340;
 const DEFAULT_RIGHT_WIDTH = 340;
-const MIN_CHAT_WIDTH = 260;
-const MAX_CHAT_WIDTH = 560;
-const MIN_PDF_WIDTH = 420;
-const MIN_RIGHT_WIDTH = 260;
-const MAX_RIGHT_WIDTH = 600;
+const MIN_CHAT_WIDTH = 220;
+const MAX_CHAT_WIDTH = 820;
+const MIN_PDF_WIDTH = 320;
+const MIN_RIGHT_WIDTH = 220;
+const MAX_RIGHT_WIDTH = 820;
 const SPLIT_HANDLE_WIDTH = 6;
 
 interface WorkspaceLayout {

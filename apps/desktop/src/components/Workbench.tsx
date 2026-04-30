@@ -1,9 +1,7 @@
 import {
   Bot,
-  ChevronRight,
   FileText,
   KeyRound,
-  Sparkle,
 } from "lucide-react";
 import type { IHighlight } from "../pdf-highlighter";
 import type {
@@ -55,12 +53,7 @@ export function Workbench({
       );
     }
 
-    return (
-      <AiPanel
-        paper={paper}
-        modelConfig={modelConfig}
-      />
-    );
+    return <AiPanel modelConfig={modelConfig} />;
   };
 
   return (
@@ -100,12 +93,8 @@ function PaperPanel({
 }
 
 function AiPanel({
-  paper,
   modelConfig,
-}: Pick<
-  WorkbenchProps,
-  "paper" | "modelConfig"
->) {
+}: Pick<WorkbenchProps, "modelConfig">) {
   return (
     <aside className="workbenchPanel">
       <PanelHeader
@@ -114,23 +103,6 @@ function AiPanel({
         icon={Bot}
         badge={modelConfig.model || "No model"}
       />
-
-      <section className="summaryGrid">
-        <div className="summaryCard">
-          <Sparkle size={14} />
-          <div>
-            <strong>Current Paper</strong>
-            <span>{paper.title}</span>
-          </div>
-        </div>
-        <div className="summaryCard">
-          <ChevronRight size={14} />
-          <div>
-            <strong>Provider</strong>
-            <span>{providerLabel(modelConfig.provider)}</span>
-          </div>
-        </div>
-      </section>
     </aside>
   );
 }
@@ -242,18 +214,6 @@ const providerDefaults: Record<
     apiBase: "https://api.anthropic.com",
     model: "claude-3-5-sonnet-latest",
   },
-};
-
-const providerLabel = (provider: AiProvider) => {
-  if (provider === "openai-responses") {
-    return "OpenAI Responses";
-  }
-
-  if (provider === "anthropic") {
-    return "Anthropic Messages";
-  }
-
-  return "OpenAI Chat";
 };
 
 function AnnotationList({ highlights }: { highlights: IHighlight[] }) {
