@@ -1,0 +1,31 @@
+{
+  "name": "papersuper",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./out/main/main.js",
+  "scripts": {
+    "dev": "node scripts/run-electron-vite.cjs dev",
+    "build": "tsc --noEmit && node scripts/run-electron-vite.cjs build",
+    "preview": "node scripts/run-electron-vite.cjs preview"
+  },
+  "dependencies": {
+    "lucide-react": "^1.14.0",
+    "pdfjs-dist": "4.4.168",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-rnd": "^10.4.11",
+    "remark-gfm": "^4.0.1",
+    "ts-debounce": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^30.5.1",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.2"
+  }
+}
