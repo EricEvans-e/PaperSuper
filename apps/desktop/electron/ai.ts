@@ -5,8 +5,9 @@ import type {
   AiMessage,
   ModelConfig,
 } from "../src/types";
+import { logFromMain } from "./logger";
 
-const REQUEST_TIMEOUT_MS = 90_000;
+const REQUEST_TIMEOUT_MS = 300_000;
 
 class AiHttpError extends Error {
   status: number;
@@ -505,15 +506,39 @@ export const sendAiCompletion = async (
 ): Promise<AiCompletionResponse> => {
   validateConfig(request.config);
 
-  if (request.config.provider === "anthropic") {
-    return sendAnthropic(request);
-  }
+  const { provider, model, apiBase } = request.config;
+  const promptLen = request.messages.map((m) => m.content.length).reduce((a, b) => a + b, 0);
+  logFromMain("INFO", "AI", `sendAiCompletion start`, {
+    provider,
+    model,
+    apiBase,
+    promptChars: promptLen,
+    contextCount: request.contextItems.length,
+  });
+  const t0 = Date.now();
 
-  if (request.config.provider === "openai-responses") {
-    return sendOpenAiResponsesWithFallback(request);
-  }
+  try {
+    const result =
+      provider === "anthropic"
+        ? await sendAnthropic(request)
+        : provider === "openai-responses"
+          ? await sendOpenAiResponsesWithFallback(request)
+          : await sendOpenAiCompatible(request);
 
-  return sendOpenAiCompatible(request);
+    logFromMain("INFO", "AI", `sendAiCompletion done in ${Date.now() - t0}ms`, {
+      provider,
+      model,
+      responseChars: result.content.length,
+    });
+    return result;
+  } catch (error) {
+    logFromMain("ERROR", "AI", `sendAiCompletion failed after ${Date.now() - t0}ms`, {
+      provider,
+      model,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 };
 
 interface StreamCallbacks {
@@ -880,15 +905,34 @@ export const streamAiCompletion = async (
 ) => {
   validateConfig(request.config);
 
-  if (request.config.provider === "anthropic") {
-    await streamAnthropic(request, callbacks);
-    return;
-  }
+  const { provider, model, apiBase } = request.config;
+  logFromMain("INFO", "AI", `streamAiCompletion start`, {
+    provider,
+    model,
+    apiBase,
+    contextCount: request.contextItems.length,
+  });
+  const t0 = Date.now();
 
-  if (request.config.provider === "openai-responses") {
-    await streamOpenAiResponsesWithFallback(request, callbacks);
-    return;
-  }
+  try {
+    if (provider === "anthropic") {
+      await streamAnthropic(request, callbacks);
+    } else if (provider === "openai-responses") {
+      await streamOpenAiResponsesWithFallback(request, callbacks);
+    } else {
+      await streamOpenAiCompatible(request, callbacks);
+    }
 
-  await streamOpenAiCompatible(request, callbacks);
+    logFromMain("INFO", "AI", `streamAiCompletion done in ${Date.now() - t0}ms`, {
+      provider,
+      model,
+    });
+  } catch (error) {
+    logFromMain("ERROR", "AI", `streamAiCompletion failed after ${Date.now() - t0}ms`, {
+      provider,
+      model,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 };

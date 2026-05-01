@@ -10,6 +10,7 @@ import type {
   AiProvider,
   ModelConfig,
   PaperDocument,
+  PaperTextPage,
 } from "../types";
 import { formatTime } from "../utils";
 import { AiWorkbench } from "./AiWorkbench";
@@ -18,6 +19,7 @@ interface WorkbenchProps {
   activity: ActivityId;
   contextItems: AiContextItem[];
   paper: PaperDocument;
+  paperTextPages: PaperTextPage[];
   highlights: IHighlight[];
   modelConfig: ModelConfig;
   onModelConfigChange: (config: ModelConfig) => void;
@@ -32,6 +34,7 @@ export function Workbench({
   activity,
   contextItems,
   paper,
+  paperTextPages,
   highlights,
   modelConfig,
   onModelConfigChange,
@@ -62,6 +65,7 @@ export function Workbench({
         contextItems={contextItems}
         modelConfig={modelConfig}
         paper={paper}
+        paperTextPages={paperTextPages}
       />
     );
   };
@@ -106,7 +110,8 @@ function AiPanel({
   contextItems,
   modelConfig,
   paper,
-}: Pick<WorkbenchProps, "contextItems" | "modelConfig" | "paper">) {
+  paperTextPages,
+}: Pick<WorkbenchProps, "contextItems" | "modelConfig" | "paper" | "paperTextPages">) {
   return (
     <aside className="workbenchPanel aiWorkspacePanel">
       <PanelHeader
@@ -119,6 +124,7 @@ function AiPanel({
         contextItems={contextItems}
         modelConfig={modelConfig}
         paper={paper}
+        paperTextPages={paperTextPages}
       />
     </aside>
   );

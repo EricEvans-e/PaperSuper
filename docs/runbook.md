@@ -1,6 +1,6 @@
 # PaperSuper Runbook
 
-Last updated: 2026-04-30
+Last updated: 2026-05-02
 
 ## Commands
 
@@ -53,16 +53,20 @@ npm run preview
 19. Open the AI activity in the right workbench and confirm the AI Workbench renders a preview workspace.
 20. Confirm the right workbench has a visible scrollbar when content exceeds the available height.
 21. Use the compact block navigator and confirm it scrolls to Overview, Visual, Formula, Experiment, and Insight blocks.
-22. In the Visual module A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
-23. In Visual A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
-24. In the Formula module, confirm expression, variables, and derivation steps fit and scroll if needed.
-25. In the Experiment module, move sliders and confirm metrics plus the teaching curve update locally.
-26. In the Insight module, confirm key points, assumptions, limitations, and next questions are visible.
-27. Click an Overview suggested action and confirm the page scrolls to the target block.
-28. Alt-drag a paragraph/table text region, click `Generate`, and confirm the AI Workbench requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
-29. Ask the AI chat to translate or explain the selected context.
-30. Confirm streaming output appears as Markdown.
-31. Run `npm run build`.
+22. In the Visual module, click `Generate` and confirm S mode becomes active when generation completes.
+23. In S mode, confirm the result is a detailed principle/structure SVG diagram rather than a small node-link flowchart.
+24. Switch to B mode, move the sliders, and confirm the principle canvas, animation/highlighted blocks, live metrics, and step explanation update without leaving the sandbox.
+25. Switch to A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
+26. In Visual A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
+27. In the Formula module, confirm expression, variables, and derivation steps fit and scroll if needed.
+28. In the Experiment module, move sliders and confirm metrics plus the teaching curve update locally.
+29. In the Insight module, confirm key points, assumptions, limitations, and next questions are visible.
+30. Click an Overview suggested action and confirm the page scrolls to the target block.
+31. Alt-drag a paragraph/table text region, click `Generate`, and confirm the AI Workbench requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
+32. Ask the AI chat to translate or explain the selected context.
+33. Confirm streaming output appears as Markdown.
+34. Check DevTools and the Electron `userData/logs/papersuper-YYYY-MM-DD.log` file for renderer/main log lines when diagnosing generation failures.
+35. Run `npm run build`.
 
 ## AI Configuration
 
@@ -141,11 +145,23 @@ Check:
 
 In development, `AiWorkbench` dispatches `papersuper:learning-event` browser events and logs them with `console.debug`. Check the browser devtools console and event listeners before adding persistence.
 
+### Visual module S mode is blank or still looks like a flowchart
+
+Check:
+
+- The Generate flow should call `generateSvgDiagram` after `VisualSpec` parsing and switch to S mode when generation completes.
+- `buildVisualSvgPrompt` should ask for a single inline `<svg>` principle diagram with spatial semantics, nested containment, arrow styles, annotations, and metrics.
+- `extractSvgDiagram` should accept a raw `<svg>` or fenced ```svg block.
+- `sanitizeSvg` should reject unsafe or oversized SVG but keep valid diagrams. It strips scripts, event handlers, `foreignObject`, external hrefs, and unsafe URL references.
+- If S mode fails, the UI should show the SVG error state rather than silently falling back to a simple flowchart.
+
 ### Visual module sliders do not change the scene
 
 Check:
 
-- The Visual module is selected and A mode is selected, not B mode.
+- If B mode is selected, confirm the iframe content has at least one range input and each input calls the local `recalc()` function. Unsafe, missing, or incomplete raw HTML content should fall back to the local teaching lesson.
+- For KV interleaving/consolidation passages, confirm B mode shows separated K/V rows, animated K_i + V_i pairing, interleaved `[K_i|V_i]` output, and live I/O metrics. If not, `normalizeHtmlDemo` should reject the AI demo and use the dedicated KV fallback.
+- If A mode is selected, continue with the local SVG checks below.
 - `apps/desktop/src/visualSimulation.ts` still exports `computeVisualSimulation`.
 - `VisualLab` passes the current `parameterValues` into `computeVisualSimulation`.
 - `SimulationLayer` receives `simulationState` and maps it to block counts, GPU lanes, metrics, and packet speed.
@@ -163,11 +179,37 @@ Check:
 
 ### AI Workbench generation times out
 
-The main Workbench generation should request structured `WorkspaceSpec` JSON only. It should not ask for HTML, JavaScript, CSS, SVG markup, or executable code. If timeouts return, check the selected model speed, `maxTokens`, and whether the prompt accidentally reintroduced B-mode HTML generation into the main request.
+The main Workbench generation should request a structured `WorkspaceSpec` only. It must not include HTML, JavaScript, CSS, SVG markup, executable code, or `htmlDemo`. Visual code is generated by a second raw-HTML call from `VisualLab`. If timeouts return, check the selected model speed, `maxTokens`, selected context length, and whether the JSON-stage prompt accidentally started requesting executable content.
 
 ### Visual module B mode looks unsafe or tries to load resources
 
 Do not run the generated HTML directly in the renderer. Keep it inside the `HtmlSandbox` iframe with `sandbox="allow-scripts"`, `referrerPolicy="no-referrer"`, and the restrictive CSP built by `buildSandboxSrcDoc`.
+
+If B mode is blank or too simple, check:
+
+- `extractHtmlFragment` should accept raw HTML or one fenced ```html block from the second-stage AI response.
+- `normalizeHtmlDemo` should fall back to `createFallbackHtmlDemo` when raw HTML is missing, lacks a range slider, lacks `recalc()`, lacks a drawing surface, or contains obvious unsafe patterns such as external scripts, `fetch`, WebSocket, `import`, `eval`, or `new Function`.
+- For KV scenes, `normalizeHtmlDemo` also checks for K/V/interleaving structure before accepting AI HTML.
+- `createFallbackHtmlDemo` should still produce a complete teaching lesson from the structured `VisualSpec`.
+- `AiWorkbench` should not request `htmlDemo`; standalone `VisualLab` asks for raw HTML/SVG/JS after the structured JSON is parsed.
+
+### Renderer logs are missing from the log file
+
+Check:
+
+- `window.paperSuper.log` is exposed in `apps/desktop/electron/preload.ts`.
+- `paperSuper:log` is registered in `apps/desktop/electron/main.ts`.
+- `apps/desktop/electron/logger.ts` writes to Electron `userData/logs/papersuper-YYYY-MM-DD.log`.
+- Renderer code should use `apps/desktop/src/log.ts`; logs are also printed to DevTools.
+
+### AI JSON parsing fails after generation
+
+Check:
+
+- `VisualLab` and `AiWorkbench` should parse model output through `parseModelJsonObject` in `apps/desktop/src/utils.ts`.
+- The helper strips fenced JSON, extracts the outer object, removes trailing commas, and repairs common missing comma boundaries.
+- If the error points near an object inside an array such as `"unit": "GB/s" }`, the model may have ended an array item and started the next property without `],`; keep the stack-based repair path in place.
+- If parsing still fails, reduce `maxTokens` pressure or ask the model to regenerate strict JSON.
 
 ### UI zoom is wrong
 

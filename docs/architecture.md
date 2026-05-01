@@ -1,6 +1,6 @@
 # PaperSuper Architecture
 
-Last updated: 2026-04-30
+Last updated: 2026-05-02
 
 ## Overview
 
@@ -23,14 +23,19 @@ Renderer React UI
   - Creates the desktop window.
   - Registers `paperSuper:openPdfFile`.
   - Registers non-streaming and streaming AI IPC handlers.
+  - Registers `paperSuper:log` for renderer-to-main file logging.
   - Owns global UI zoom shortcuts and persists the zoom factor in Electron `userData`.
 - `apps/desktop/electron/preload.ts`
-  - Exposes `openPdfFile`, `adjustUiZoom`, `sendAiMessage`, `sendAiMessageStream`, and `onAiStreamEvent`.
+  - Exposes `openPdfFile`, `adjustUiZoom`, `sendAiMessage`, `sendAiMessageStream`, `onAiStreamEvent`, and `log`.
+- `apps/desktop/electron/logger.ts`
+  - Writes main and renderer log lines to `userData/logs/papersuper-YYYY-MM-DD.log`.
+  - Keeps logging best-effort so file write failures do not crash the app.
 - `apps/desktop/electron/ai.ts`
   - Validates model config.
   - Builds the research assistant system prompt.
   - Sends requests to OpenAI Chat Completions, OpenAI Responses, or Anthropic Messages.
   - Parses normal JSON responses and SSE streaming responses.
+  - Applies a 300-second timeout to non-streaming AI requests so larger structured generation calls can finish before local abort.
 - `apps/desktop/src/App.tsx`
   - Owns top-level renderer state: active activity, current paper, PDF URL, highlights, selected AI context, messages, model config, and workspace layout.
   - Renders the three-zone workspace grid: AI chat, PDF reader, split handles, and right workbench.
@@ -51,17 +56,28 @@ Renderer React UI
   - Uses local preview modules when AI generation fails or no passage is selected.
 - `apps/desktop/src/components/VisualLab.tsx`
   - Renders the Visual module inside the right AI Workbench.
-  - Uses local structured `VisualSpec` data, SVG rendering, playback state, focused steps, and parameter sliders for A mode.
+  - Provides S/B/A modes. S mode is the preferred generated view for paper-style SVG principle/structure diagrams.
+  - S mode asks AI for a single inline `<svg>`, sanitizes it, and renders it as the static principle diagram.
+  - B mode renders a self-contained HTML/JS teaching lesson inside a sandboxed iframe.
+  - Generates B-mode code through a second raw-HTML AI call after structured `VisualSpec` JSON is parsed, avoiding large HTML/CSS/JS strings inside JSON.
+  - Generates a local B-mode fallback lesson from safe `VisualSpec` data when raw AI HTML is missing, unsafe, or too incomplete to teach the selected mechanism.
+  - Keeps A mode as the structured React/SVG fallback with playback state, focused steps, and parameter sliders.
+  - A mode prefers `mechanismBrief`, `principleDiagram`, and the `VisualSpec.scene` mechanism track when present, rendering regions, units, operations, and active steps through local React/SVG.
+  - Normalizes AI-provided scene coordinates, rejects broken or overlapping region layouts, inherits missing unit placements, and reindexes units by region/lane to avoid collapsed diagrams.
   - Supports both legacy `nodes` / `edges` flow diagrams and richer declarative `visualElements` such as matrices, layer stacks, formulas, brackets, bars, axes, annotations, and arrows.
-  - Renders self-contained AI-generated HTML/JS demos inside a sandboxed iframe for B mode.
   - Can still generate a standalone `VisualSpec`, but the right-side primary flow now comes through `AiWorkbench` and `WorkspaceSpec`.
-  - Extracts and validates model JSON before rendering; failed generation falls back to a local preview scene.
+  - Extracts, lightly repairs, and validates model JSON before rendering; failed generation falls back to a local preview scene.
 - `apps/desktop/src/visualSimulation.ts`
   - Computes the local Visual Lab A-mode simulation state from `VisualSpec.parameters` and current slider values.
   - Infers or uses `VisualSpec.simulation.model` for teaching-oriented models such as KV cache layout, attention flow, memory transfer, pipeline, or generic flow.
   - Returns derived values for sequence length, KV pairs, interleave stride, block size, GPU lanes, bandwidth, block counts, locality, utilization, speed, and display metrics.
 - `apps/desktop/src/components/AiChatPanel.tsx`
   - Renders the left AI chat pane, Markdown AI answers, and stream event updates.
+- `apps/desktop/src/utils.ts`
+  - Provides shared renderer helpers.
+  - `parseModelJsonObject` extracts model JSON from fenced/plain responses, repairs common comma issues, and throws clearer diagnostics when parsing still fails.
+- `apps/desktop/src/log.ts`
+  - Logs to renderer DevTools and forwards structured log events to main through `window.paperSuper.log`.
 
 ## Data Flow
 
@@ -112,7 +128,7 @@ Renderer React UI
 2. `Workbench` passes the current `contextItems` into `AiWorkbench`.
 3. User clicks `Generate` after selecting a paragraph or region in the PDF.
 4. `AiWorkbench` asks the current AI provider for strict `WorkspaceSpec` JSON using `window.paperSuper.sendAiMessage`.
-5. The prompt intentionally asks for local safe modules only; it does not ask for HTML, JavaScript, CSS, SVG markup, or executable code.
+5. The workbench shell remains structured JSON. It must not include HTML, JavaScript, CSS, SVG markup, executable code, or `htmlDemo`.
 6. The renderer extracts and validates the JSON into safe local primitives.
 7. `AiWorkbench` renders modules as a single scrollable page with Overview, Visual, Formula, Experiment, and Insight blocks.
 8. The compact navigator scrolls to each block rather than replacing content.
@@ -122,13 +138,26 @@ Renderer React UI
 12. The Formula module renders expression, plain-language explanation, variables, and derivation steps.
 13. The Experiment module renders parameter sliders, local computed metrics, a lightweight teaching curve, and observations.
 14. The Insight module renders key points, assumptions, limitations, and next questions.
-15. Visual A mode draws the scene with React/SVG instead of executing generated code.
-16. Visual A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
-17. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
-18. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
-19. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
-20. B-mode HTML demos remain isolated in the existing iframe sandbox and are no longer part of the main Workbench generation request.
-21. If generation fails or JSON is invalid, the panel keeps a local preview workspace and displays the error.
+15. VisualLab generates two AI visual tracks in parallel after `VisualSpec` is parsed: raw HTML for B mode and inline SVG for S mode.
+16. S mode asks the current AI provider for a single `<svg>` paper-style principle diagram, then `sanitizeSvg` removes scripts, event handlers, `foreignObject`, external links, and overlong payloads before rendering.
+17. After full Generate, VisualLab switches to S mode by default so the first result is an原理图/结构图 rather than a generic flow diagram.
+18. B mode asks for raw self-contained HTML/SVG/JS code, not JSON.
+19. `extractHtmlFragment` accepts raw HTML or a single fenced ```html block, strips document wrappers, and passes the fragment to `normalizeHtmlDemo`.
+20. If the raw HTML passes the unsafe/incomplete-demo check, B mode renders it in the iframe sandbox with CSP.
+21. If raw HTML is missing, unsafe, or too incomplete to teach the mechanism, B mode generates a local self-contained teaching lesson from the structured `VisualSpec`.
+22. The fallback lesson chooses a layout tendency from the semantic/template/title, such as memory prefetch, attention matrix, architecture, comparison, or generic mechanism.
+23. KV interleaving/consolidation has a dedicated B-mode fallback lesson: separated K cache / V cache rows, animated K_i + V_i pairing, interleaved `[K_i|V_i]` output, token/group/speed sliders, and live I/O reduction metrics.
+24. A mode draws the structured fallback scene with React/SVG instead of executing generated code.
+25. A mode prefers `mechanismBrief`, `principleDiagram`, and `VisualSpec.scene` for mechanism-first diagrams. The renderer turns AI-provided regions, units, operations, and steps into a stable SVG animation.
+26. `normalizeMechanismScene` treats model coordinates as flexible input: `0..1` values become normalized canvas coordinates, `0..100` values become percentages, and invalid or heavily overlapping regions fall back to a stable local layout.
+27. Scene unit placement inherits missing `lane` / `index` values, reindexes units by region/lane, and applies KV-specific lanes for K cache, V cache, and interleaved `[K|V]` outputs.
+28. A mode falls back to semantic diagrams or the legacy visual canvas when no `scene` exists.
+29. A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
+30. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
+31. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
+32. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
+33. B-mode HTML demos remain isolated in the existing iframe sandbox.
+34. If generation fails or JSON is invalid, the panel keeps a local preview workspace and displays the error.
 
 ### Global UI Zoom
 
@@ -178,7 +207,12 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 - `WorkspaceAction`: first-pass intent object for focusing blocks, selected PDF context, or future report views
 - `LearningEvent`: local event shape dispatched for future learning analytics and left-agent coordination
 - `VisualSpec`: structured visualization scene rendered locally in the right AI Workspace
+- `VisualSemanticSpec`: semantic source-of-truth object/flow/takeaway track for Visual Lab
+- `VisualMechanismBrief`: short source-of-truth explanation of the mechanism, objects, causal chain, learning goal, and takeaway
+- `VisualPrincipleDiagram`: static principle/structure diagram with regions, relations, annotations, and takeaway
+- `VisualMechanismScene`: mechanism-first visual scene with regions, units, operations, placements, and teaching steps
 - `VisualHtmlDemo`: self-contained HTML/JS demo rendered only inside the Visual Lab iframe sandbox
+- Sanitized SVG principle diagram: renderer state only, generated by the S-mode AI request and never persisted in `VisualSpec`
 - `VisualSimulationSpec`: optional model hint for the local Visual Lab simulation engine
 - `VisualElement`: safe declarative SVG primitive for richer A-mode diagrams
 - `VisualNode`, `VisualEdge`, `VisualParameter`, and `VisualStep`: renderer-owned visual scene primitives
@@ -198,8 +232,9 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
 - Right AI Workbench includes a page-style Overview plus Visual, Formula, Experiment, and Insight blocks.
-- The Visual module includes Visual Lab with A/B mode switching between local SVG rendering and sandboxed HTML/JS demos.
-- A-mode local SVG rendering can combine flow nodes, edges, simulation layers, and declarative visual elements for non-flowchart diagrams.
+- The Visual module includes Visual Lab with S/B/A mode switching. S is the preferred generated mode for static principle/structure diagrams.
+- B mode uses safe raw AI HTML generated in a second step and otherwise generates a local fallback lesson from `VisualSpec`.
+- A-mode local SVG rendering remains available as a manual structured fallback; it prefers `principleDiagram` and mechanism `scene` diagrams, then semantic diagrams, and can still combine flow nodes, edges, simulation layers, and declarative visual elements for non-flowchart diagrams.
 - Draggable vertical split handles between left/PDF and PDF/right zones.
 - Compact chat styling at narrow widths, with auto-collapse below the threshold and same-drag reopen when the pointer moves back right.
 

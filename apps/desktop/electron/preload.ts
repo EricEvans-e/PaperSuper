@@ -15,4 +15,10 @@ contextBridge.exposeInMainWorld("paperSuper", {
     ipcRenderer.on("paperSuper:aiStreamEvent", listener);
     return () => ipcRenderer.removeListener("paperSuper:aiStreamEvent", listener);
   },
+  log: (
+    level: string,
+    category: string,
+    message: string,
+    data?: Record<string, unknown>,
+  ) => ipcRenderer.invoke("paperSuper:log", level, category, message, data),
 });

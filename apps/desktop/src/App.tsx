@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityBar } from "./components/ActivityBar";
 import { AiChatPanel } from "./components/AiChatPanel";
 import { PdfReaderPane } from "./components/PdfReaderPane";
@@ -11,6 +11,7 @@ import type {
   AiMessage,
   ModelConfig,
   PaperDocument,
+  PaperTextPage,
 } from "./types";
 import { makeId } from "./utils";
 
@@ -107,6 +108,7 @@ export function App() {
   const [pdfUrl, setPdfUrl] = useState(SAMPLE_PDF_URL);
   const [highlights, setHighlights] = useState<IHighlight[]>([]);
   const [contextItems, setContextItems] = useState<AiContextItem[]>([]);
+  const [paperTextPages, setPaperTextPages] = useState<PaperTextPage[]>([]);
   const [messages, setMessages] = useState<AiMessage[]>(() => [
     {
       id: makeId(),
@@ -252,6 +254,10 @@ export function App() {
       items.filter((highlight) => highlight.id !== highlightId),
     );
   };
+
+  const handlePaperTextReady = useCallback((pages: PaperTextPage[]) => {
+    setPaperTextPages(pages);
+  }, []);
 
   const clearContextHighlights = () => {
     const contextHighlightIds = new Set(
@@ -402,6 +408,7 @@ export function App() {
             modelConfig={modelConfig}
             onHighlightsChange={setHighlights}
             onAddContext={addContextItem}
+            onPaperTextReady={handlePaperTextReady}
             onRemoveContextHighlight={removeContextHighlight}
             onClearContextHighlights={clearContextHighlights}
           />
@@ -416,6 +423,7 @@ export function App() {
             activity={activity}
             contextItems={contextItems}
             paper={paper}
+            paperTextPages={paperTextPages}
             highlights={highlights}
             modelConfig={modelConfig}
             onModelConfigChange={setModelConfig}

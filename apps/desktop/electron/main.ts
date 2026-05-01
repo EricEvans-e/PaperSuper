@@ -9,6 +9,7 @@ import {
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { sendAiCompletion, streamAiCompletion } from "./ai";
+import { logFromMain, logFromRenderer, getLogFilePath, type LogLevel } from "./logger";
 import type { AiCompletionRequest } from "../src/types";
 
 const DEFAULT_UI_ZOOM_FACTOR = 1;
@@ -239,6 +240,19 @@ ipcMain.handle("paperSuper:adjustUiZoom", async (_event, action: unknown) => {
 ipcMain.handle(
   "paperSuper:sendAiMessage",
   async (_event, request: AiCompletionRequest) => sendAiCompletion(request),
+);
+
+ipcMain.handle(
+  "paperSuper:log",
+  async (
+    _event,
+    level: LogLevel,
+    category: string,
+    message: string,
+    data?: Record<string, unknown>,
+  ) => {
+    logFromRenderer(level, category, message, data);
+  },
 );
 
 ipcMain.handle(

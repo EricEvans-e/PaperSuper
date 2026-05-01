@@ -1,8 +1,6 @@
 import {
   Beaker,
-  BookOpenText,
   Brain,
-  ChevronDown,
   FunctionSquare,
   Lightbulb,
   RefreshCcw,
@@ -18,6 +16,7 @@ import type {
   LearningEvent,
   ModelConfig,
   PaperDocument,
+  PaperTextPage,
   VisualParameter,
   VisualSpec,
   WorkspaceAction,
@@ -25,29 +24,23 @@ import type {
   WorkspaceModuleType,
   WorkspaceSpec,
 } from "../types";
-import { makeId } from "../utils";
+import { makeId, parseModelJsonObject } from "../utils";
 import { createMockVisualSpec, normalizeVisualSpec, VisualLab } from "./VisualLab";
 
 interface AiWorkbenchProps {
   contextItems: AiContextItem[];
   modelConfig: ModelConfig;
   paper: PaperDocument;
+  paperTextPages: PaperTextPage[];
 }
 
 type GenerationStatus = "idle" | "loading" | "done" | "error";
 
-const moduleMeta: Record<
-  WorkspaceModuleType | "overview",
-  {
-    label: string;
-    icon: typeof Brain;
-  }
-> = {
-  overview: { label: "Overview", icon: BookOpenText },
-  visual: { label: "Visual", icon: Brain },
-  formula: { label: "Formula", icon: FunctionSquare },
-  experiment: { label: "Experiment", icon: Beaker },
-  insight: { label: "Insight", icon: Lightbulb },
+const moduleMeta: Record<WorkspaceModuleType, { label: string; icon: typeof Brain }> = {
+  visual: { label: "图示", icon: Brain },
+  formula: { label: "公式", icon: FunctionSquare },
+  experiment: { label: "参数", icon: Beaker },
+  insight: { label: "要点", icon: Lightbulb },
 };
 
 const clip = (text: string, maxLength: number) =>
@@ -116,6 +109,44 @@ const normalizeStringList = (
     .map((item, index) => safeString(item, fallback[index] ?? "Item", maxLength))
     .filter(Boolean);
 
+const clipContext = (text: string, maxLength: number) =>
+  text.length > maxLength ? `${text.slice(0, maxLength).trim()}\n...` : text;
+
+const buildPaperContextExcerpt = (
+  paperTextPages: PaperTextPage[],
+  pageNumber?: number,
+) => {
+  if (paperTextPages.length === 0) {
+    return "No extracted paper text is available yet.";
+  }
+
+  const selectedPage = pageNumber
+    ? paperTextPages.find((page) => page.pageNumber === pageNumber)
+    : undefined;
+  const neighborPages = pageNumber
+    ? paperTextPages.filter(
+        (page) =>
+          page.pageNumber >= pageNumber - 1 && page.pageNumber <= pageNumber + 1,
+      )
+    : [];
+  const firstPages = paperTextPages.slice(0, 2);
+  const orderedPages = [
+    ...(selectedPage ? [selectedPage] : []),
+    ...neighborPages,
+    ...firstPages,
+  ].filter(
+    (page, index, pages) =>
+      pages.findIndex((item) => item.pageNumber === page.pageNumber) === index,
+  );
+
+  return clipContext(
+    orderedPages
+      .map((page) => `[Page ${page.pageNumber}]\n${page.text}`)
+      .join("\n\n"),
+    10_000,
+  );
+};
+
 const recordLearningEvent = (event: LearningEvent) => {
   window.dispatchEvent(
     new CustomEvent("papersuper:learning-event", {
@@ -128,72 +159,21 @@ const recordLearningEvent = (event: LearningEvent) => {
   }
 };
 
-const normalizeActions = (
-  value: unknown,
-  workspaceId: string,
-  modules: WorkspaceModule[],
-  activeContext: AiContextItem,
-): WorkspaceAction[] => {
-  const moduleIds = new Set(modules.map((module) => module.id));
-  const actions = (Array.isArray(value) ? value : [])
-    .slice(0, 4)
-    .map((item): WorkspaceAction | null => {
-      const action = item as Partial<WorkspaceAction> & Record<string, unknown>;
-
-      if (action.type === "focus_block") {
-        const blockId = safeId(action.blockId, "");
-        if (!moduleIds.has(blockId)) {
-          return null;
-        }
-
-        return { type: "focus_block", blockId };
-      }
-
-      if (action.type === "focus_pdf_context") {
-        return {
-          type: "focus_pdf_context",
-          contextId: safeId(action.contextId, activeContext.id),
-          highlightId: safeId(action.highlightId, "") || undefined,
-        };
-      }
-
-      if (action.type === "open_learning_report") {
-        return { type: "open_learning_report" };
-      }
-
-      if (action.type === "open_workspace") {
-        return {
-          type: "open_workspace",
-          workspaceId: safeId(action.workspaceId, workspaceId),
-        };
-      }
-
-      return null;
-    })
-    .filter(Boolean) as WorkspaceAction[];
-
-  return actions.length > 0
-    ? actions
-    : [
-        {
-          type: "focus_block",
-          blockId: modules[0]?.id ?? "visual-module",
-        },
-      ];
-};
-
 const buildWorkspacePrompt = ({
   activeContext,
   paper,
+  paperContext,
 }: {
   activeContext: AiContextItem;
   paper: PaperDocument;
+  paperContext: string;
 }) =>
   [
     "You generate a modular AI Workbench for PaperSuper.",
     "Return ONLY valid JSON. Do not wrap it in Markdown. Do not include comments.",
-    "Do NOT generate HTML, JavaScript, CSS, SVG markup, or executable code.",
+    "JSON validity is mandatory: every array/object element must be separated by commas, no trailing commas, no unescaped newlines inside strings, and all string values must use double quotes.",
     "The JSON must describe local safe modules rendered by PaperSuper.",
+    "Do NOT include HTML, JavaScript, CSS, SVG markup, executable code, or htmlDemo in this JSON. PaperSuper generates the visual code in a separate raw-HTML step after this JSON is parsed.",
     "The JSON must match this TypeScript-like shape:",
     "{",
     '  "title": string,',
@@ -208,13 +188,36 @@ const buildWorkspacePrompt = ({
     "}",
     "",
     "VisualSpec requirements:",
-    "- Use the same VisualSpec fields as PaperSuper A mode: title, kind, summary, nodes, edges, visualElements, parameters, steps, simulation.",
-    "- Do not include htmlDemo in the visual module.",
-    "- Use visualElements for architecture, matrices, tensor grids, formulas, bars, brackets, axes, annotations, arrows, and non-flowchart diagrams.",
+    "- Use the same VisualSpec fields as PaperSuper A mode: title, kind, diagramType, diagramPurpose, readerTakeaway, semantic, mechanismBrief, principleDiagram, scene, summary, nodes, edges, visualElements, parameters, steps, simulation.",
+    '- semantic must be present and must match: {"template": "memory-prefetch-pipeline" | "memory-hierarchy" | "attention-matrix" | "model-architecture" | "equation-transform" | "comparison-tradeoff" | "timeline-stage" | "generic-mechanism", "problem": string, "mechanism": string[], "keyObjects": [{"id": string, "label": string, "role": string, "detail": string}], "flows": [{"from": string, "to": string, "label": string, "detail": string}], "takeaway": string}.',
+    '- mechanismBrief must be present and must match: {"mechanismName": string, "coreProblem": string, "keyObjects": [{"id": string, "label": string, "role": string, "evidence": string}], "causalChain": string[], "learningGoal": string, "takeaway": string}.',
+    '- principleDiagram must be present and must match: {"title": string, "diagramKind": "structure-map" | "mechanism-map" | "matrix-map" | "equation-map" | "comparison-map" | "timeline-map" | "geometry-map", "centralClaim": string, "regions": [{"id": string, "label": string, "role": string, "detail": string, "x": number, "y": number, "width": number, "height": number, "tone": "blue" | "green" | "amber" | "rose" | "neutral"}], "relations": [{"id": string, "from": string, "to": string, "label": string, "detail": string, "relationType": "causes" | "depends-on" | "transfers" | "transforms" | "predicts" | "compares" | "contains"}], "annotations": [{"id": string, "targetId": string, "label": string, "detail": string, "x": number, "y": number, "tone": "blue" | "green" | "amber" | "rose" | "neutral"}], "takeaway": string}.',
+    '- scene must be present and must match: {"title": string, "sceneKind": "layout-transform" | "dataflow" | "matrix-computation" | "architecture-assembly" | "state-transition" | "comparison-mechanism" | "geometric-process" | "generic-mechanism", "purpose": string, "regions": [{"id": string, "label": string, "role": string, "x": number, "y": number, "width": number, "height": number, "tone": "blue" | "green" | "amber" | "rose" | "neutral"}], "units": [{"id": string, "label": string, "kind": string, "regionId": string, "lane": number, "index": number, "tone": "blue" | "green" | "amber" | "rose" | "neutral", "pairWith": string, "value": string, "detail": string}], "steps": [{"id": string, "title": string, "description": string, "operation": "move" | "pair" | "merge" | "split" | "reorder" | "broadcast" | "filter" | "accumulate" | "lookup" | "transform" | "compare" | "compute", "activeUnitIds": string[], "fromRegionId": string, "toRegionId": string, "resultUnitIds": string[], "placements": [{"unitId": string, "regionId": string, "lane": number, "index": number, "hidden": boolean}], "parameterEffects": string[]}], "takeaway": string}.',
+    "- The visual module must be a clear teaching diagram, not a decorative cockpit or metrics dashboard.",
+    "- The visual module must follow this learning chain: mechanismBrief explains the problem and causal logic; principleDiagram draws the static 原理图; scene turns the same mechanism into a playable animation; parameters let the learner manipulate visible behavior.",
+    "- Do not output only a flowchart. The visual module should expose how the mechanism works internally: objects, regions, state changes, movement, pairing, merging, splitting, comparison, or computation.",
+    "- Let the paper passage decide diagramType: structure, mechanism, equation, matrix, comparison, timeline, or geometry.",
+    "- Let semantic.template decide the local renderer template. Use memory-prefetch-pipeline for SSD/host/GPU memory/KV cache prefetching; memory-hierarchy for cache/storage layers; attention-matrix for query/key/value attention weights; model-architecture for module structure; equation-transform for formula derivations; comparison-tradeoff for alternatives; timeline-stage for staged procedures.",
+    "- diagramPurpose must state what the diagram explains in one plain Chinese sentence.",
+    "- readerTakeaway must state what the reader should understand after looking at the diagram.",
+    "- semantic.keyObjects must contain the real objects from the paper, not generic 'Concept' placeholders.",
+    "- semantic.flows must name real transfer, prediction, dependency, or transformation relations.",
+    "- principleDiagram.regions must be 3 to 6 real structures or mechanism objects, not Step 1/Step 2 boxes.",
+    "- principleDiagram.relations must encode causal logic such as predicts, transfers, transforms, depends-on, compares, contains, or causes.",
+    "- If the passage is about speculative prefetching, principleDiagram should show history of KV block selections -> temporal locality predictor -> predicted critical KV blocks -> SSD/host transfer -> GPU memory before self-attention.",
+    "- scene.regions must describe visual places such as original layout/action/optimized layout, operands/score/output, modules/submodules, or states. scene.units must be concrete objects from the paper, not generic steps.",
+    "- If the passage is about KV cache interleaving/consolidation, scene must show separated K lane and V lane first, token-wise K_i + V_i pairing, then compact [K_i|V_i] units. Generalize this structure-and-motion style to other mechanisms.",
+    "- Do not include htmlDemo. The later raw-HTML code-generation step will use this structured VisualSpec to write the actual interactive SVG/HTML/JS visualization.",
+    "- scene.steps should be 3 to 5 short teaching steps. Each step should activate visible units and use an operation like pair, merge, reorder, compute, lookup, broadcast, or accumulate.",
+    "- Use visualElements for the main explanatory drawing: architecture blocks, matrices, tensor grids, formulas, bars, brackets, axes, annotations, arrows, and non-flowchart diagrams.",
+    "- Prefer one dominant visual form. Do not mix flowchart, GPU meters, cache blocks, matrix, and formula unless the selected passage truly needs them.",
+    "- Use 3 to 5 major nodes in most cases and 1 to 3 meaningful parameters.",
+    "- Parameters should change the visual scene directly: unit count, spacing, highlighted span, matrix density, merge strength, or animation speed.",
     "- Use Simplified Chinese for user-visible text, but keep technical terms like token, KV cache, GPU kernel, attention, softmax, query, key, value in English when clearer.",
     "",
     "Workbench requirements:",
     "- Always include exactly one visual module.",
+    "- Build the visual module from the selected passage plus the paper context excerpt. Use the broader context to recover missing objects, storage layers, algorithms, and terminology.",
     "- Include one formula module if the passage contains formulas, algorithmic transformations, variables, or tensor operations.",
     "- Include one experiment module with 2 to 4 meaningful sliders and 2 to 4 metrics.",
     "- Include one insight module that explains contribution, assumptions, limitations, and next questions.",
@@ -225,20 +228,10 @@ const buildWorkspacePrompt = ({
     `Selected page: ${activeContext.pageNumber || "unknown"}`,
     "Selected passage:",
     activeContext.text,
+    "",
+    "Paper context excerpt:",
+    paperContext,
   ].join("\n");
-
-const extractJsonObject = (text: string) => {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced?.[1] ?? text;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-
-  if (start < 0 || end <= start) {
-    throw new Error("The model did not return a JSON object.");
-  }
-
-  return JSON.parse(candidate.slice(start, end + 1));
-};
 
 const createFallbackWorkspaceSpec = (
   activeContext: AiContextItem | undefined,
@@ -536,10 +529,8 @@ const normalizeWorkspaceSpec = (
     modules.push(normalizeInsightModule({}, modules.length));
   }
 
-  const workspaceId = `workspace-${activeContext.id}-${Date.now()}`;
-
   return {
-    id: workspaceId,
+    id: `workspace-${activeContext.id}-${Date.now()}`,
     title: safeString(source.title, "AI Workbench", 72),
     summary: safeString(
       source.summary,
@@ -548,7 +539,7 @@ const normalizeWorkspaceSpec = (
     ),
     sourceContextId: activeContext.id,
     modules: modules.slice(0, 8),
-    actions: normalizeActions(source.actions, workspaceId, modules, activeContext),
+    actions: undefined,
   };
 };
 
@@ -556,6 +547,7 @@ export function AiWorkbench({
   contextItems,
   modelConfig,
   paper,
+  paperTextPages,
 }: AiWorkbenchProps) {
   const [revision, setRevision] = useState(0);
   const activeContext = contextItems[0];
@@ -589,31 +581,6 @@ export function AiWorkbench({
     });
   }, [activeContext?.id, paper.id, spec.id, spec.modules.length, workspace]);
 
-  const focusBlock = (blockId: string) => {
-    document.getElementById(blockId)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  };
-
-  const runAction = (action: WorkspaceAction) => {
-    recordLearningEvent({
-      id: makeId(),
-      type: "workspace_action",
-      paperId: paper.id,
-      contextId: activeContext?.id,
-      createdAt: new Date().toISOString(),
-      metadata: {
-        actionType: action.type,
-        blockId: action.type === "focus_block" ? action.blockId : undefined,
-      },
-    });
-
-    if (action.type === "focus_block") {
-      focusBlock(action.blockId);
-    }
-  };
-
   const generateWorkspace = async () => {
     if (!activeContext?.text.trim()) {
       setStatus("error");
@@ -628,7 +595,14 @@ export function AiWorkbench({
       {
         id: makeId(),
         role: "user",
-        content: buildWorkspacePrompt({ activeContext, paper }),
+        content: buildWorkspacePrompt({
+          activeContext,
+          paper,
+          paperContext: buildPaperContextExcerpt(
+            paperTextPages,
+            activeContext.pageNumber,
+          ),
+        }),
         createdAt: new Date().toISOString(),
       },
     ];
@@ -637,7 +611,7 @@ export function AiWorkbench({
       const response = await window.paperSuper?.sendAiMessage({
         config: {
           ...modelConfig,
-          maxTokens: Math.max(modelConfig.maxTokens, 2600),
+          maxTokens: Math.max(modelConfig.maxTokens, 5200),
         },
         paperTitle: paper.title,
         contextItems: [
@@ -648,7 +622,7 @@ export function AiWorkbench({
         ],
         messages,
       });
-      const rawSpec = extractJsonObject(response?.content || "");
+      const rawSpec = parseModelJsonObject(response?.content || "");
       const nextWorkspace = normalizeWorkspaceSpec(rawSpec, activeContext);
       setWorkspace(nextWorkspace);
       setStatus("done");
@@ -676,15 +650,18 @@ export function AiWorkbench({
             : "Select a paragraph in the PDF first";
 
   return (
-    <div className="aiWorkbench">
-      <section className="workspaceHeader">
+    <div className="aiWorkbench compactWorkbench">
+      <section className="workspaceHeader compactWorkspaceHeader">
         <div className="workspaceTitleBlock">
           <span className="workspaceEyebrow">
-            {workspace ? "AI workspace" : "Local preview"} - Page{" "}
+            {workspace ? "AI" : "Preview"} - Page{" "}
             {activeContext?.pageNumber || "sample"}
           </span>
           <strong title={spec.title}>{spec.title}</strong>
-          <p>{spec.summary}</p>
+          <p>{clip(spec.summary, 120)}</p>
+          <span className={`workspaceState ${status === "error" ? "error" : ""}`}>
+            {statusText}
+          </span>
         </div>
         <button
           type="button"
@@ -697,44 +674,13 @@ export function AiWorkbench({
         </button>
       </section>
 
-      <nav className="workspaceTabs workspacePageNav" aria-label="AI workspace blocks">
-        <button
-          type="button"
-          className="workspaceTab active"
-          onClick={() => focusBlock("workspace-overview")}
-        >
-          <BookOpenText size={13} />
-          <span>Overview</span>
-        </button>
-        {spec.modules.map((module) => {
-          const meta = moduleMeta[module.type];
-          const Icon = meta.icon;
-          return (
-            <button
-              type="button"
-              className="workspaceTab"
-              key={module.id}
-              onClick={() => focusBlock(module.id)}
-            >
-              <Icon size={13} />
-              <span>{meta.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
       <WorkspacePageRenderer
         contextItems={contextItems}
         modelConfig={modelConfig}
-        onAction={runAction}
         paper={paper}
+        paperTextPages={paperTextPages}
         workspace={spec}
       />
-
-      <section className="workspaceStatus">
-        <BookOpenText size={13} />
-        <span className={status === "error" ? "error" : ""}>{statusText}</span>
-      </section>
     </div>
   );
 }
@@ -742,51 +688,50 @@ export function AiWorkbench({
 function WorkspacePageRenderer({
   contextItems,
   modelConfig,
-  onAction,
   paper,
+  paperTextPages,
   workspace,
 }: {
   contextItems: AiContextItem[];
   modelConfig: ModelConfig;
-  onAction: (action: WorkspaceAction) => void;
   paper: PaperDocument;
+  paperTextPages: PaperTextPage[];
   workspace: WorkspaceSpec;
 }) {
-  return (
-    <section className="workspacePage">
-      <article className="workspaceOverviewBlock" id="workspace-overview">
-        <div className="moduleIntro">
-          <span>Overview</span>
-          <strong>{workspace.title}</strong>
-          <p>{workspace.summary}</p>
-        </div>
-        {workspace.actions?.length ? (
-          <div className="workspaceActionList">
-            {workspace.actions.map((action, index) => (
-              <button
-                type="button"
-                className="workspaceActionButton"
-                key={`${action.type}-${index}`}
-                onClick={() => onAction(action)}
-              >
-                <ChevronDown size={13} />
-                <span>{actionLabel(action, workspace.modules)}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </article>
+  const visualModule = workspace.modules.find((module) => module.type === "visual");
+  const supportModules = workspace.modules
+    .filter((module) => module.type !== "visual")
+    .slice(0, 3);
 
-      {workspace.modules.map((module) => (
-        <section className="workspaceBlock" id={module.id} key={module.id}>
+  return (
+    <section className="workspacePage compactWorkspacePage">
+      {visualModule ? (
+        <section className="workspaceBlock visualWorkspaceBlock" id={visualModule.id}>
           <WorkspaceModuleView
             contextItems={contextItems}
-            module={module}
+            module={visualModule}
             modelConfig={modelConfig}
             paper={paper}
+            paperTextPages={paperTextPages}
           />
         </section>
-      ))}
+      ) : null}
+
+      {supportModules.length ? (
+        <section className="workspaceEssentials" aria-label="Key learning notes">
+          {supportModules.map((module) => (
+            <section className="workspaceBlock compactSupportBlock" id={module.id} key={module.id}>
+              <WorkspaceModuleView
+                contextItems={contextItems}
+                module={module}
+                modelConfig={modelConfig}
+                paper={paper}
+                paperTextPages={paperTextPages}
+              />
+            </section>
+          ))}
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -812,11 +757,13 @@ function WorkspaceModuleView({
   modelConfig,
   module,
   paper,
+  paperTextPages,
 }: {
   contextItems: AiContextItem[];
   modelConfig: ModelConfig;
   module: WorkspaceModule;
   paper: PaperDocument;
+  paperTextPages: PaperTextPage[];
 }) {
   useEffect(() => {
     recordLearningEvent({
@@ -844,6 +791,7 @@ function WorkspaceModuleView({
         hideGenerate
         modelConfig={modelConfig}
         paper={paper}
+        paperTextPages={paperTextPages}
         specOverride={module.visual}
       />
     );
@@ -866,8 +814,8 @@ function FormulaModuleView({ module }: { module: FormulaWorkspaceModule }) {
       <ModuleIntro module={module} />
       <div className="formulaExpression">{module.formula.expression}</div>
       <p className="moduleParagraph">{module.formula.plainLanguage}</p>
-      <div className="formulaVariableGrid">
-        {module.formula.variables.map((variable) => (
+      <div className="formulaVariableGrid compactFormulaVariables">
+        {module.formula.variables.slice(0, 4).map((variable) => (
           <div className="formulaVariable" key={variable.symbol}>
             <strong>{variable.symbol}</strong>
             <span>{variable.meaning}</span>
@@ -876,7 +824,7 @@ function FormulaModuleView({ module }: { module: FormulaWorkspaceModule }) {
         ))}
       </div>
       <div className="derivationList">
-        {module.formula.derivationSteps.map((step, index) => (
+        {module.formula.derivationSteps.slice(0, 3).map((step, index) => (
           <div className="derivationStep" key={`${step.title}-${index}`}>
             <span>{index + 1}</span>
             <div>
@@ -931,9 +879,9 @@ function ExperimentModuleView({
     <div className="workspaceModule experimentModule">
       <ModuleIntro module={module} />
       <p className="moduleParagraph">{module.experiment.objective}</p>
-      <div className="experimentSurface">
+      <div className="experimentSurface compactExperimentSurface">
         <div className="experimentCurve" style={{ ["--energy" as string]: energy }}>
-          {Array.from({ length: 18 }).map((_, index) => (
+          {Array.from({ length: 10 }).map((_, index) => (
             <span
               key={`bar-${index}`}
               style={{
@@ -943,7 +891,7 @@ function ExperimentModuleView({
           ))}
         </div>
         <div className="experimentMetrics">
-          {module.experiment.metrics.map((metric) => {
+          {module.experiment.metrics.slice(0, 3).map((metric) => {
             const directionalFactor =
               metric.direction === "lower-better" ? 1 - energy : energy;
             const value = Math.min(
@@ -967,7 +915,7 @@ function ExperimentModuleView({
         </div>
       </div>
       <div className="experimentControls">
-        {module.experiment.parameters.map((parameter) => (
+        {module.experiment.parameters.slice(0, 3).map((parameter) => (
           <label className="visualSliderRow" key={parameter.id}>
             <span>{parameter.label}</span>
             <input
@@ -1004,7 +952,7 @@ function ExperimentModuleView({
         ))}
       </div>
       <div className="observationList">
-        {module.experiment.observations.map((observation, index) => (
+        {module.experiment.observations.slice(0, 2).map((observation, index) => (
           <p key={`${observation}-${index}`}>{observation}</p>
         ))}
       </div>

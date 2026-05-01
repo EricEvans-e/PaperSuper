@@ -22,6 +22,12 @@ interface PaperSuperBridge {
     request: AiCompletionRequest,
   ) => Promise<void>;
   onAiStreamEvent: (callback: (event: AiStreamEvent) => void) => () => void;
+  log: (
+    level: "DEBUG" | "INFO" | "WARN" | "ERROR",
+    category: string,
+    message: string,
+    data?: Record<string, unknown>,
+  ) => Promise<void>;
 }
 
 declare global {

@@ -10,6 +10,11 @@ export interface PaperDocument {
   openedAt: string;
 }
 
+export interface PaperTextPage {
+  pageNumber: number;
+  text: string;
+}
+
 export interface ModelConfig {
   provider: AiProvider;
   apiBase: string;
@@ -54,6 +59,25 @@ export type VisualKind =
   | "matrix"
   | "geometry"
   | "timeline";
+
+export type VisualDiagramType =
+  | "structure"
+  | "mechanism"
+  | "equation"
+  | "matrix"
+  | "comparison"
+  | "timeline"
+  | "geometry";
+
+export type VisualSemanticTemplate =
+  | "memory-prefetch-pipeline"
+  | "memory-hierarchy"
+  | "attention-matrix"
+  | "model-architecture"
+  | "equation-transform"
+  | "comparison-tradeoff"
+  | "timeline-stage"
+  | "generic-mechanism";
 
 export type VisualNodeTone = "blue" | "green" | "amber" | "rose" | "neutral";
 
@@ -143,10 +167,192 @@ export interface VisualSimulationSpec {
   description?: string;
 }
 
+export interface VisualSemanticObject {
+  id: string;
+  label: string;
+  role: string;
+  detail?: string;
+}
+
+export interface VisualSemanticFlow {
+  from: string;
+  to: string;
+  label: string;
+  detail?: string;
+}
+
+export interface VisualSemanticSpec {
+  template: VisualSemanticTemplate;
+  problem: string;
+  mechanism: string[];
+  keyObjects: VisualSemanticObject[];
+  flows: VisualSemanticFlow[];
+  takeaway: string;
+}
+
+export interface VisualMechanismBrief {
+  mechanismName: string;
+  coreProblem: string;
+  keyObjects: Array<{
+    id: string;
+    label: string;
+    role: string;
+    evidence?: string;
+  }>;
+  causalChain: string[];
+  learningGoal: string;
+  takeaway: string;
+}
+
+export type VisualPrincipleDiagramKind =
+  | "structure-map"
+  | "mechanism-map"
+  | "matrix-map"
+  | "equation-map"
+  | "comparison-map"
+  | "timeline-map"
+  | "geometry-map";
+
+export type VisualPrincipleRelationType =
+  | "causes"
+  | "depends-on"
+  | "transfers"
+  | "transforms"
+  | "predicts"
+  | "compares"
+  | "contains";
+
+export interface VisualPrincipleRegion {
+  id: string;
+  label: string;
+  role: string;
+  detail?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  tone?: VisualNodeTone;
+}
+
+export interface VisualPrincipleRelation {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  detail?: string;
+  relationType?: VisualPrincipleRelationType;
+}
+
+export interface VisualPrincipleAnnotation {
+  id: string;
+  targetId?: string;
+  label: string;
+  detail?: string;
+  x?: number;
+  y?: number;
+  tone?: VisualNodeTone;
+}
+
+export interface VisualPrincipleDiagram {
+  title: string;
+  diagramKind: VisualPrincipleDiagramKind;
+  centralClaim: string;
+  regions: VisualPrincipleRegion[];
+  relations: VisualPrincipleRelation[];
+  annotations: VisualPrincipleAnnotation[];
+  takeaway: string;
+}
+
+export type VisualMechanismSceneKind =
+  | "layout-transform"
+  | "dataflow"
+  | "matrix-computation"
+  | "architecture-assembly"
+  | "state-transition"
+  | "comparison-mechanism"
+  | "geometric-process"
+  | "generic-mechanism";
+
+export type VisualMechanismOperation =
+  | "move"
+  | "pair"
+  | "merge"
+  | "split"
+  | "reorder"
+  | "broadcast"
+  | "filter"
+  | "accumulate"
+  | "lookup"
+  | "transform"
+  | "compare"
+  | "compute";
+
+export interface VisualMechanismRegion {
+  id: string;
+  label: string;
+  role: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  tone?: VisualNodeTone;
+}
+
+export interface VisualMechanismUnit {
+  id: string;
+  label: string;
+  kind: string;
+  regionId: string;
+  lane?: number;
+  index?: number;
+  tone?: VisualNodeTone;
+  pairWith?: string;
+  value?: string;
+  detail?: string;
+}
+
+export interface VisualMechanismUnitPlacement {
+  unitId: string;
+  regionId: string;
+  lane?: number;
+  index?: number;
+  hidden?: boolean;
+}
+
+export interface VisualMechanismStepSpec {
+  id: string;
+  title: string;
+  description: string;
+  operation: VisualMechanismOperation;
+  activeUnitIds: string[];
+  fromRegionId?: string;
+  toRegionId?: string;
+  resultUnitIds?: string[];
+  placements?: VisualMechanismUnitPlacement[];
+  parameterEffects?: string[];
+}
+
+export interface VisualMechanismScene {
+  title: string;
+  sceneKind: VisualMechanismSceneKind;
+  purpose: string;
+  regions: VisualMechanismRegion[];
+  units: VisualMechanismUnit[];
+  steps: VisualMechanismStepSpec[];
+  takeaway: string;
+}
+
 export interface VisualSpec {
   id: string;
   title: string;
   kind: VisualKind;
+  diagramType?: VisualDiagramType;
+  diagramPurpose?: string;
+  readerTakeaway?: string;
+  semantic?: VisualSemanticSpec;
+  mechanismBrief?: VisualMechanismBrief;
+  principleDiagram?: VisualPrincipleDiagram;
+  scene?: VisualMechanismScene;
   sourceContextId?: string;
   summary: string;
   nodes: VisualNode[];
@@ -156,6 +362,8 @@ export interface VisualSpec {
   visualElements?: VisualElement[];
   simulation?: VisualSimulationSpec;
   htmlDemo?: VisualHtmlDemo;
+  /** AI-generated inline SVG diagram for high-fidelity principle illustration. */
+  svgDiagram?: string;
 }
 
 export type WorkspaceModuleType = "visual" | "formula" | "experiment" | "insight";

@@ -24,7 +24,12 @@ import type {
   NewHighlight,
   ScaledPosition,
 } from "../pdf-highlighter";
-import type { AiContextItem, ModelConfig, PaperDocument } from "../types";
+import type {
+  AiContextItem,
+  ModelConfig,
+  PaperDocument,
+  PaperTextPage,
+} from "../types";
 import { makeId } from "../utils";
 
 const parseIdFromHash = () =>
@@ -61,13 +66,9 @@ interface PdfReaderPaneProps {
   onAddContext: (
     context: Pick<AiContextItem, "text" | "highlightId" | "pageNumber">,
   ) => void;
+  onPaperTextReady: (pages: PaperTextPage[]) => void;
   onRemoveContextHighlight: (highlightId: string) => void;
   onClearContextHighlights: () => void;
-}
-
-interface PaperTextPage {
-  pageNumber: number;
-  text: string;
 }
 
 interface OverlayAnchor {
@@ -817,6 +818,7 @@ export function PdfReaderPane({
   modelConfig,
   onHighlightsChange,
   onAddContext,
+  onPaperTextReady,
   onRemoveContextHighlight,
   onClearContextHighlights,
 }: PdfReaderPaneProps) {
@@ -858,7 +860,12 @@ export function PdfReaderPane({
     setHighlightActionMenu(null);
     setTranslationPopup(null);
     setPaperTextPages([]);
-  }, [pdfUrl]);
+    onPaperTextReady([]);
+  }, [onPaperTextReady, pdfUrl]);
+
+  useEffect(() => {
+    onPaperTextReady(paperTextPages);
+  }, [onPaperTextReady, paperTextPages]);
 
   const getOverlayAnchor = useCallback(
     (clientX: number, clientY: number, width: number, minHeight = 80) => {

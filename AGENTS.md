@@ -1,6 +1,6 @@
 # PaperSuper Agent Notes
 
-Last updated: 2026-04-30
+Last updated: 2026-05-02
 
 ## Project Shape
 
@@ -12,7 +12,10 @@ PaperSuper is an Electron + React + TypeScript desktop prototype for a PDF-first
 - Global UI zoom shortcuts and persistence: `apps/desktop/electron/main.ts`
 - PDF wrapper export: `apps/desktop/src/pdf-highlighter.ts`
 - Right AI Workbench container: `apps/desktop/src/components/AiWorkbench.tsx`
+- Visual Lab renderer and HTML sandbox: `apps/desktop/src/components/VisualLab.tsx`
 - Visual Lab local simulation engine: `apps/desktop/src/visualSimulation.ts`
+- Shared renderer helpers, including AI JSON parsing repair: `apps/desktop/src/utils.ts`
+- Main/renderer logging bridge: `apps/desktop/electron/logger.ts`, `apps/desktop/src/log.ts`
 - Vendored PDF base: `react-pdf-highlighter/`
 - Docs: `docs/`
 
@@ -40,11 +43,23 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 - Keep PDF-only zoom in the renderer/PDF reader path via `pdfScaleValue`; do not mix it with global app zoom.
 - Keep the right side organized around page-style `WorkspaceSpec` modules in `AiWorkbench`; `VisualLab` is the visual block, not the whole right-side product.
 - `AiWorkbench` has a first-pass UI action/event protocol: `WorkspaceAction` describes UI intents, and learning events are dispatched as `papersuper:learning-event` browser events.
-- Keep right-side structured visualization work in renderer-owned `VisualSpec` data and local React/SVG rendering.
+- `AiWorkbench` should request structured `WorkspaceSpec` JSON only for the workbench shell. Do not put HTML, JavaScript, CSS, SVG markup, executable code, or `htmlDemo` inside Workbench JSON.
+- Visual Lab has three modes: S for AI-generated sanitized SVG principle diagrams, B for sandboxed HTML/SVG/JS demos, and A for structured local React/SVG. Generation defaults to S after a successful full Generate because the user wants principle/structure diagrams before animations.
+- Visual Lab B mode uses a two-stage flow: first parse structured `VisualSpec` JSON, then ask AI for raw sandbox HTML/SVG/JS code. It falls back to local lessons when raw HTML is missing, unsafe, or too incomplete.
+- Visual Lab A mode is the structured fallback/manual alternative. Keep right-side structured visualization work in renderer-owned `VisualSpec` data and local React/SVG rendering.
 - A-mode `VisualSpec` can include both legacy `nodes` / `edges` and richer declarative `visualElements`; prefer adding safe SVG primitives over executing generated code.
+- A-mode `VisualSpec` can also include `semantic` and `scene`; `scene` is the preferred mechanism-first track for diagrams that need regions, concrete units, operations, and step animation.
+- A-mode `VisualSpec` can include `mechanismBrief` and `principleDiagram`; use them to explain the paper mechanism before the step animation.
+- Do not trust AI-provided `scene` coordinates blindly. Keep `normalizeMechanismScene`, region fallback, placement inheritance, and unit reindexing in place so normalized coordinates, overlapping regions, or missing `lane` / `index` values cannot collapse the SVG into the top-left corner.
+- KV/cache layout scenes should preserve the stable K lane, V lane, animated K/V pairing, and interleaved KV output lane behavior unless a later renderer intentionally replaces it.
 - Visual Lab A mode parameters should flow through `computeVisualSimulation`; sliders must visibly recompute local state, not only update numeric labels.
 - HTML/JS visual demos must stay inside the `VisualLab` iframe sandbox with CSP; do not run AI-generated HTML/JS directly in the renderer.
 - Treat AI-generated HTML/JS as untrusted teaching/demo content. It may run only in the sandboxed iframe and must not get renderer, Node, network, or file access.
+- `normalizeHtmlDemo` rejects obvious unsafe HTML patterns and incomplete demos, including missing sliders, missing `recalc()`, or KV demos without K/V/interleaving structure; keep that fallback path working.
+- AI-generated SVG principle diagrams are inserted with `dangerouslySetInnerHTML` only after `sanitizeSvg` removes scripts, event handlers, foreignObject, external links, and overlong payloads. Keep that sanitizer intact.
+- `window.paperSuper.log` forwards renderer logs to the main process file logger. Keep logging fire-and-forget and do not expose filesystem paths or Node APIs to the renderer.
+- Use `parseModelJsonObject` for model JSON payloads that may be fenced, have trailing commas, or be missing commas.
+- Keep the stack-based array/property repair in `parseModelJsonObject`; it intentionally handles model output where an object array ends with a value like `"unit": "GB/s" }` and then starts the next property without the missing `],`.
 - API keys currently live in renderer `localStorage`; treat that as prototype-only.
 
 ## PDF Context Behavior
@@ -76,6 +91,8 @@ Streaming flow:
 
 OpenAI-compatible gateways often support only Chat Completions. For a 404 on `/v1/responses`, switch to `openai-chat` or verify the gateway supports the Responses API.
 
+Non-streaming AI requests use a 300-second timeout in `apps/desktop/electron/ai.ts`. This longer window is intentional because Visual Lab and AI Workbench generation can request large structured JSON.
+
 ## Current Zoom Support
 
 Global app zoom:
@@ -102,7 +119,10 @@ The current UI is a dark IDE shell with:
 - collapsible AI chat pane on the left, toggled from the activity bar
 - PDF pane in the center
 - reserved workbench pane on the right for Paper/AI/Settings tools
-- right AI Workbench renders a page-style workspace with Visual, Formula, Experiment, and Insight blocks plus compact block navigation; the Visual block contains Visual Lab with A/B mode switching, playback, step focus, parameter sliders, local simulation metrics, declarative SVG visual elements, and iframe sandbox HTML demos
+- right AI Workbench renders a page-style workspace with Visual, Formula, Experiment, and Insight blocks plus compact block navigation; the Visual block contains Visual Lab with S/B/A mode switching, sanitized SVG principle diagrams, B-mode sandbox mechanism lessons, playback, step focus, parameter sliders, local simulation metrics, and declarative SVG fallback rendering
+- Visual Lab S mode asks AI for a single inline `<svg>` principle diagram, sanitizes it, and shows it as the preferred generated view; use this path to avoid regressing to simple flowcharts when the user expects paper-style structure diagrams
+- Visual Lab B mode prefers safe raw AI HTML generated in the second stage, then falls back to any legacy `htmlDemo`, then the local self-contained lesson generated by `createFallbackHtmlDemo`; KV interleaving/consolidation has a dedicated fallback that shows separated K/V rows, animated pairing, interleaved `[K_i|V_i]` output, sliders, and I/O metrics
+- Visual Lab A mode prefers `principleDiagram` plus the local `scene` renderer when present, then falls back to semantic diagrams or the legacy visual canvas
 - draggable vertical handles between the three zones
 - compact AI chat styling at narrow widths, with drag-to-collapse and same-drag reopen behavior
 

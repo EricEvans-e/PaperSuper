@@ -744,10 +744,6 @@ select:disabled {
 }
 
 .workspaceHeader,
-.workspaceTabs,
-.workspaceStatus,
-.workspaceModuleShell,
-.workspaceOverviewBlock,
 .workspaceBlock {
   border: 1px solid #292b31;
   border-radius: 6px;
@@ -800,60 +796,6 @@ select:disabled {
   white-space: nowrap;
 }
 
-.workspaceTabs {
-  display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 3px;
-  padding: 3px;
-}
-
-.workspacePageNav {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.workspaceTab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 0;
-  height: 27px;
-  border-radius: 4px;
-  color: #9aa0aa;
-  font-size: 10.5px;
-  font-weight: 800;
-  background: transparent;
-  cursor: pointer;
-}
-
-.workspaceTab span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.workspaceTab:hover {
-  color: #f5f6f8;
-  background: #24262c;
-}
-
-.workspaceTab.active {
-  color: #101112;
-  background: #58c08c;
-}
-
-.workspaceModuleShell {
-  min-height: 560px;
-  overflow: visible;
-}
-
-.workspaceModuleShell > .visualLab {
-  padding: 0;
-}
-
 .workspacePage {
   display: grid;
   flex: 0 0 auto;
@@ -862,104 +804,70 @@ select:disabled {
   min-width: 0;
 }
 
-.workspaceOverviewBlock,
 .workspaceBlock {
   min-width: 0;
   scroll-margin-top: 42px;
   overflow: visible;
 }
 
-.workspaceOverviewBlock {
-  display: grid;
-  gap: 9px;
-  padding: 10px;
+.compactWorkbench {
+  gap: 7px;
+  padding-right: 0;
 }
 
-.workspaceActionList {
-  display: grid;
-  gap: 6px;
-}
-
-.workspaceActionButton {
-  display: flex;
+.compactWorkspaceHeader {
   align-items: center;
-  gap: 6px;
-  min-width: 0;
   padding: 7px 8px;
-  border: 1px solid #30343d;
-  border-radius: 6px;
-  color: #d8dbe1;
-  font-size: 10.5px;
-  font-weight: 800;
-  text-align: left;
-  background: #111319;
-  cursor: pointer;
+  background: #15161a;
 }
 
-.workspaceActionButton:hover {
-  color: #f5f6f8;
-  border-color: rgba(88, 192, 140, 0.48);
-  background: #171b22;
-}
-
-.workspaceActionButton svg {
-  color: #58c08c;
-  flex: 0 0 auto;
-}
-
-.workspaceActionButton span {
+.workspaceState {
   overflow: hidden;
+  color: #7f8794;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.workspaceStatus {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  padding: 0 8px;
-  color: #9aa0aa;
-  font-size: 10.5px;
-}
-
-.workspaceStatus svg {
-  color: #58c08c;
-  flex: 0 0 auto;
-}
-
-.workspaceStatus span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.workspaceStatus .error {
+.workspaceState.error {
   color: #e86f8d;
+}
+
+.compactWorkspacePage {
+  gap: 7px;
+}
+
+.workspaceEssentials {
+  display: grid;
+  gap: 7px;
+}
+
+.compactSupportBlock {
+  background: #15161a;
 }
 
 .workspaceModule {
   display: grid;
   align-content: start;
-  gap: 9px;
+  gap: 7px;
   height: auto;
   min-height: 0;
   overflow: visible;
-  padding: 10px;
+  padding: 8px;
 }
 
+.visualWorkspaceBlock > .visualLab,
 .workspaceBlock > .visualLab {
   height: auto;
-  min-height: 760px;
+  min-height: 0;
 }
 
 .workspaceBlock .visualHero {
-  min-height: 470px;
+  min-height: 360px;
 }
 
 .workspaceBlock .visualCanvas {
-  min-height: 320px;
+  min-height: 250px;
 }
 
 .moduleIntro {
@@ -978,7 +886,7 @@ select:disabled {
 .moduleIntro strong {
   overflow: hidden;
   color: #f5f6f8;
-  font-size: 13px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -987,18 +895,18 @@ select:disabled {
 .moduleParagraph {
   margin: 0;
   color: #a8adb7;
-  font-size: 11px;
+  font-size: 10.5px;
   line-height: 1.48;
 }
 
 .formulaExpression {
-  padding: 10px;
-  border: 1px solid rgba(111, 156, 255, 0.34);
+  padding: 8px;
+  border: 1px solid #2d3139;
   border-radius: 6px;
   color: #f5f6f8;
   background: #111319;
   font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 750;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -1006,8 +914,8 @@ select:disabled {
 
 .formulaVariableGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: 1fr;
+  gap: 5px;
 }
 
 .formulaVariable,
@@ -1022,9 +930,9 @@ select:disabled {
 
 .formulaVariable {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
-  padding: 8px;
+  padding: 6px 7px;
 }
 
 .formulaVariable strong {
@@ -1051,21 +959,21 @@ select:disabled {
 
 .derivationList {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .derivationStep {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: 7px;
-  padding: 8px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px 7px;
 }
 
 .derivationStep > span {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   color: #101112;
   background: #58c08c;
@@ -1113,20 +1021,27 @@ select:disabled {
   transition: height 170ms ease;
 }
 
+.compactExperimentSurface .experimentCurve {
+  display: none;
+}
+
 .experimentMetrics,
 .experimentControls,
 .observationList,
 .insightModule {
   display: grid;
-  gap: 7px;
+  gap: 6px;
+}
+
+.compactMetrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .experimentMetric {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 5px;
+  gap: 3px;
   align-items: center;
-  padding: 7px;
+  padding: 6px;
 }
 
 .experimentMetric span {
@@ -1140,6 +1055,10 @@ select:disabled {
 .experimentMetric strong {
   color: #f5f6f8;
   font-size: 11px;
+}
+
+.compactMetrics .metricTrack {
+  display: none;
 }
 
 .metricTrack {
@@ -1160,7 +1079,18 @@ select:disabled {
 
 .observationList p {
   margin: 0;
+  padding: 6px 7px;
+  color: #a8adb7;
+  font-size: 10.5px;
+  line-height: 1.42;
+}
+
+.insightGroup {
   padding: 7px;
+}
+
+.insightGroup p {
+  margin: 5px 0 0;
   color: #a8adb7;
   font-size: 10.5px;
   line-height: 1.42;
@@ -1183,10 +1113,10 @@ select:disabled {
 
 .visualLab {
   display: grid;
-  grid-template-rows: minmax(280px, 1fr) auto auto;
-  gap: 8px;
+  grid-template-rows: auto auto auto;
+  gap: 7px;
   min-height: 0;
-  height: 100%;
+  height: auto;
 }
 
 .visualHero,
@@ -1199,7 +1129,7 @@ select:disabled {
 
 .visualHero {
   display: grid;
-  grid-template-rows: auto minmax(180px, 1fr) auto;
+  grid-template-rows: auto minmax(260px, auto);
   min-height: 0;
   overflow: hidden;
 }
@@ -1209,8 +1139,8 @@ select:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 38px;
-  padding: 7px 8px 7px 10px;
+  min-height: 34px;
+  padding: 6px 8px;
   border-bottom: 1px solid #292b31;
 }
 
@@ -1285,12 +1215,54 @@ select:disabled {
 
 .visualCanvasShell {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 6px;
   min-width: 0;
   min-height: 0;
-  padding: 8px;
+  padding: 7px;
   overflow: hidden;
+}
+
+.visualStructuredStack {
+  display: grid;
+  grid-template-rows: minmax(260px, auto) minmax(260px, auto);
+  gap: 7px;
+  min-height: 0;
+  padding: 8px;
+  overflow: auto;
+}
+
+.visualStructuredStack > .visualCanvasShell {
+  padding: 0;
+}
+
+.visualDiagramIntent {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+  padding: 2px 2px 4px;
+}
+
+.visualDiagramIntent span {
+  padding: 2px 6px;
+  border: 1px solid rgba(88, 192, 140, 0.32);
+  border-radius: 5px;
+  color: #77d9a5;
+  font-size: 10px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.visualDiagramIntent strong {
+  overflow: hidden;
+  color: #dfe4eb;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .visualCanvas {
@@ -1302,7 +1274,7 @@ select:disabled {
 
 .visualMetricStrip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -1333,6 +1305,560 @@ select:disabled {
   font-size: 11px;
 }
 
+.visualTakeaway {
+  margin: 0;
+  padding: 7px 8px;
+  border: 1px solid #252a31;
+  border-radius: 6px;
+  color: #b8c0cc;
+  font-size: 11px;
+  line-height: 1.42;
+  background: #13161b;
+  overflow-wrap: anywhere;
+}
+
+.principleCanvasShell {
+  grid-template-rows: auto auto minmax(250px, 1fr) auto auto;
+}
+
+.principleBriefStrip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.principleBriefStrip div {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #252a31;
+  border-radius: 6px;
+  background: #13161b;
+}
+
+.principleBriefStrip span {
+  display: block;
+  color: #77d9a5;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.principleBriefStrip p {
+  display: -webkit-box;
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: #c3cad5;
+  font-size: 10.5px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.principleBg {
+  fill: #101216;
+}
+
+.principleCanvasTitle {
+  fill: #f5f6f8;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.principleArrowHead {
+  fill: #697381;
+}
+
+.principleRelation path {
+  fill: none;
+  stroke: #566170;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+  transition:
+    stroke 150ms ease,
+    stroke-width 150ms ease,
+    opacity 150ms ease;
+}
+
+.principleRelation.active path {
+  stroke: #58c08c;
+  stroke-width: 2.3;
+}
+
+.principleRelationLabelBg {
+  fill: rgba(16, 18, 22, 0.9);
+  stroke: #2d333c;
+}
+
+.principleRelationLabel {
+  fill: #dce4ee;
+  font-size: 10.5px;
+  font-weight: 850;
+}
+
+.principleRelationType {
+  fill: #8f98a6;
+  font-size: 8.8px;
+  font-weight: 800;
+}
+
+.principlePacket {
+  fill: #f5f6f8;
+}
+
+.principleRegion rect {
+  fill: rgba(27, 30, 37, 0.86);
+  stroke: #313742;
+  stroke-width: 1.1;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease,
+    stroke-width 150ms ease;
+}
+
+.principleRegion.active rect {
+  fill: rgba(29, 38, 42, 0.96);
+  stroke: #58c08c;
+  stroke-width: 1.9;
+}
+
+.principleRegion.blue rect {
+  stroke-color: rgba(111, 156, 255, 0.62);
+}
+
+.principleRegion.green rect {
+  stroke-color: rgba(88, 192, 140, 0.62);
+}
+
+.principleRegion.amber rect {
+  stroke-color: rgba(242, 184, 107, 0.64);
+}
+
+.principleRegion.rose rect {
+  stroke-color: rgba(232, 111, 141, 0.62);
+}
+
+.principleRegionLabel {
+  fill: #f5f6f8;
+  font-size: 11.5px;
+  font-weight: 850;
+}
+
+.principleRegionRole {
+  fill: #aeb7c3;
+  font-size: 9.5px;
+  font-weight: 760;
+}
+
+.principleRegionDetail {
+  fill: #7f8897;
+  font-size: 8.8px;
+  font-weight: 700;
+}
+
+.principleRegionPulse {
+  fill: rgba(88, 192, 140, 0.9);
+}
+
+.principleAnnotationLine {
+  fill: none;
+  stroke: rgba(143, 152, 166, 0.44);
+  stroke-dasharray: 4 5;
+  stroke-linecap: round;
+  stroke-width: 1;
+}
+
+.principleAnnotation rect {
+  fill: rgba(18, 21, 27, 0.94);
+  stroke: #303742;
+}
+
+.principleAnnotation.blue rect {
+  stroke-color: rgba(111, 156, 255, 0.54);
+}
+
+.principleAnnotation.green rect {
+  stroke-color: rgba(88, 192, 140, 0.54);
+}
+
+.principleAnnotation.amber rect {
+  stroke-color: rgba(242, 184, 107, 0.56);
+}
+
+.principleAnnotation.rose rect {
+  stroke-color: rgba(232, 111, 141, 0.54);
+}
+
+.principleAnnotationLabel {
+  fill: #e8edf5;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.principleAnnotationDetail {
+  fill: #a9b1be;
+  font-size: 8.8px;
+  font-weight: 720;
+}
+
+.principleChain {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.principleChainItem {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid #252a31;
+  border-radius: 6px;
+  background: #13161b;
+}
+
+.principleChainItem span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: #101112;
+  background: #58c08c;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.principleChainItem p {
+  margin: 0;
+  overflow: hidden;
+  color: #b8c0cc;
+  font-size: 10px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semanticCanvasShell {
+  grid-template-rows: auto minmax(280px, 1fr) auto auto;
+}
+
+.mechanismCanvasShell {
+  grid-template-rows: auto minmax(300px, 1fr) auto auto;
+}
+
+.mechanismBg {
+  fill: #101216;
+}
+
+.mechanismRegion rect {
+  fill: rgba(27, 30, 37, 0.72);
+  stroke: #2d333d;
+  stroke-width: 1.1;
+  transition:
+    fill 160ms ease,
+    stroke 160ms ease,
+    stroke-width 160ms ease;
+}
+
+.mechanismRegion.active rect {
+  fill: rgba(31, 37, 45, 0.94);
+  stroke: #58c08c;
+  stroke-width: 1.8;
+}
+
+.mechanismRegion.blue rect {
+  stroke: rgba(111, 156, 255, 0.46);
+}
+
+.mechanismRegion.green rect {
+  stroke: rgba(88, 192, 140, 0.46);
+}
+
+.mechanismRegion.amber rect {
+  stroke: rgba(242, 184, 107, 0.48);
+}
+
+.mechanismRegion.rose rect {
+  stroke: rgba(232, 111, 141, 0.48);
+}
+
+.mechanismRegionLabel {
+  fill: #f5f6f8;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.mechanismRegionRole {
+  fill: #8f98a6;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.mechanismActivePath path {
+  fill: none;
+  stroke: url("#mechanismActiveGradient");
+  stroke-dasharray: 6 8;
+  stroke-linecap: round;
+  stroke-width: 2.1;
+  opacity: 0.76;
+}
+
+.mechanismPacket {
+  fill: #f5f6f8;
+  opacity: 0.92;
+}
+
+.mechanismPairLine {
+  fill: none;
+  stroke: rgba(88, 192, 140, 0.38);
+  stroke-dasharray: 4 5;
+  stroke-linecap: round;
+  stroke-width: 1.3;
+}
+
+.mechanismUnit rect {
+  fill: #1c2028;
+  stroke: #3a414d;
+  stroke-width: 1.1;
+  transition:
+    fill 160ms ease,
+    stroke 160ms ease,
+    stroke-width 160ms ease,
+    transform 160ms ease;
+}
+
+.mechanismUnit text {
+  fill: #f5f6f8;
+  font-size: 10.5px;
+  font-weight: 850;
+  text-anchor: middle;
+}
+
+.mechanismUnit.blue rect {
+  stroke: rgba(111, 156, 255, 0.72);
+}
+
+.mechanismUnit.green rect {
+  stroke: rgba(88, 192, 140, 0.72);
+}
+
+.mechanismUnit.amber rect {
+  stroke: rgba(242, 184, 107, 0.74);
+}
+
+.mechanismUnit.rose rect {
+  stroke: rgba(232, 111, 141, 0.74);
+}
+
+.mechanismUnit.active rect {
+  fill: #232a32;
+  stroke: #58c08c;
+  stroke-width: 2;
+}
+
+.mechanismUnit.result rect {
+  fill: rgba(88, 192, 140, 0.18);
+}
+
+.mechanismUnitPulse {
+  fill: none;
+  pointer-events: none;
+  stroke: rgba(88, 192, 140, 0.36);
+  stroke-width: 1;
+}
+
+.mechanismOperationBadge rect {
+  fill: rgba(17, 19, 25, 0.9);
+  stroke: #303640;
+}
+
+.mechanismOperationBadge text {
+  fill: #dfe5ee;
+  font-size: 10.5px;
+  font-weight: 850;
+}
+
+.mechanismStepList {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.mechanismStepCard {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid #252a31;
+  border-radius: 6px;
+  background: #13161b;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.mechanismStepCard.active {
+  border-color: rgba(88, 192, 140, 0.58);
+  background: #18201d;
+}
+
+.mechanismStepCard span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: #101112;
+  background: #4f5968;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.mechanismStepCard.active span {
+  background: #58c08c;
+}
+
+.mechanismStepCard p {
+  margin: 0;
+  overflow: hidden;
+  color: #b8c0cc;
+  font-size: 10px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semanticBg {
+  fill: #101216;
+}
+
+.semanticMemoryLanes rect {
+  fill: rgba(28, 31, 38, 0.56);
+  stroke: #252a33;
+  stroke-width: 1;
+}
+
+.semanticMemoryLanes text {
+  fill: #7f8897;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.semanticFlow path {
+  fill: none;
+  stroke: #5b6370;
+  stroke-linecap: round;
+  stroke-width: 1.7;
+}
+
+.semanticFlow.active path {
+  stroke: #58c08c;
+  stroke-width: 2.4;
+}
+
+.semanticFlow text {
+  fill: #aab2bf;
+  font-size: 10px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.semanticArrowHead {
+  fill: #6f7887;
+}
+
+.semanticFlow.active .semanticArrowHead {
+  fill: #58c08c;
+}
+
+.semanticPacket {
+  fill: #58c08c;
+  opacity: 0.9;
+}
+
+.semanticObject rect {
+  fill: #1a1d24;
+  stroke: #3a414d;
+  stroke-width: 1.2;
+  transition:
+    fill 160ms ease,
+    stroke 160ms ease,
+    stroke-width 160ms ease;
+}
+
+.semanticObject.active rect {
+  fill: #20262d;
+  stroke: #58c08c;
+  stroke-width: 2;
+}
+
+.semanticObject.blue rect {
+  stroke: rgba(111, 156, 255, 0.68);
+}
+
+.semanticObject.green rect {
+  stroke: rgba(88, 192, 140, 0.68);
+}
+
+.semanticObject.amber rect {
+  stroke: rgba(242, 184, 107, 0.68);
+}
+
+.semanticObject.rose rect {
+  stroke: rgba(232, 111, 141, 0.68);
+}
+
+.semanticObjectLabel {
+  fill: #f5f6f8;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.semanticObjectRole {
+  fill: #a8b0bd;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.semanticMechanismList {
+  display: grid;
+  gap: 5px;
+}
+
+.semanticMechanismStep {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  padding: 6px 7px;
+  border: 1px solid #252a31;
+  border-radius: 6px;
+  background: #13161b;
+}
+
+.semanticMechanismStep span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: #101112;
+  background: #58c08c;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.semanticMechanismStep p {
+  margin: 0;
+  color: #b8c0cc;
+  font-size: 10.5px;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+
 .visualMetric.blue {
   border-color: rgba(111, 156, 255, 0.42);
 }
@@ -1349,18 +1875,63 @@ select:disabled {
   border-color: rgba(232, 111, 141, 0.42);
 }
 
+.visualSvgDiagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 390px;
+  max-height: 540px;
+  padding: 8px;
+  background: #0d0f13;
+  border: 1px solid #292d35;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.visualSvgDiagram svg {
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+}
+
+.visualSvgLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #9aa0aa;
+  font-size: 13px;
+}
+
+.visualSvgLoadingIcon {
+  animation: visualSvgPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes visualSvgPulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.visualSvgPlaceholder {
+  color: #6b7280;
+  font-size: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
 .visualSandboxShell {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, auto) auto;
   min-width: 0;
   min-height: 0;
-  padding: 8px;
+  padding: 7px;
 }
 
 .visualSandboxFrame {
   width: 100%;
-  height: 100%;
-  min-height: 230px;
+  height: 390px;
+  min-height: 390px;
   border: 1px solid #292d35;
   border-radius: 7px;
   background: #101112;
@@ -1370,7 +1941,7 @@ select:disabled {
   display: grid;
   gap: 2px;
   min-width: 0;
-  padding: 7px 2px 0;
+  padding: 5px 2px 0;
 }
 
 .visualSandboxFooter strong,
@@ -1391,10 +1962,11 @@ select:disabled {
 }
 
 .visualGridBg {
-  fill: #121317;
+  fill: #111317;
 }
 
 .visualGridLine {
+  opacity: 0.42;
   stroke: #24272e;
   stroke-width: 1;
 }
@@ -1579,7 +2151,7 @@ select:disabled {
 }
 
 .visualEdge.active {
-  stroke: url(#visualSignalGradient);
+  stroke: #58c08c;
   opacity: 0.92;
 }
 
@@ -1590,7 +2162,8 @@ select:disabled {
 }
 
 .visualSignal {
-  fill: #f5f6f8;
+  fill: #58c08c;
+  opacity: 0.82;
 }
 
 .visualToken {
@@ -1760,15 +2333,15 @@ select:disabled {
 }
 
 .visualStepText span {
-  color: #9aa0aa;
+  color: #aeb5c1;
   font-size: 10.5px;
 }
 
 .visualControls,
 .visualNotes {
   display: grid;
-  gap: 8px;
-  padding: 9px;
+  gap: 6px;
+  padding: 8px;
 }
 
 .visualSectionTitle {
@@ -1815,12 +2388,32 @@ select:disabled {
   accent-color: #58c08c;
 }
 
-.visualNotes p {
+.visualParameterEffects {
+  display: grid;
+  gap: 4px;
+}
+
+.visualParameterEffects p {
   margin: 0;
+  padding: 5px 7px;
+  border: 1px solid #252a31;
+  border-radius: 5px;
+  color: #aeb7c3;
+  font-size: 10px;
+  line-height: 1.35;
+  background: #13161b;
+}
+
+.visualNotes p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
   color: #a8adb7;
   font-size: 11px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .visualStatus {
