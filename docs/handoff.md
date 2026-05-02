@@ -25,7 +25,7 @@ Last updated: 2026-05-02
 - Left AI chat has compact narrow-width styling, auto-collapses when dragged below the threshold, and can reopen during the same drag when pulled back right.
 - Workspace widths and chat visibility are persisted in renderer `localStorage`.
 - Right AI Workbench with modular Visual, Formula, Experiment, and Insight panels generated from selected paper context.
-- Main AI Workbench generation requests structured `WorkspaceSpec` JSON only. It no longer embeds HTML/CSS/JS in JSON; VisualLab generates visual code through a second raw-HTML AI call.
+- Main AI Workbench generation requests structured `WorkspaceSpec` JSON only. It no longer embeds HTML/CSS/JS/SVG in JSON; VisualLab generates S-mode SVG and B-mode raw HTML through separate AI calls.
 - Right AI Workbench content scrolls as a whole so taller modules are not clipped.
 - The AI activity panel keeps the header fixed in the right workbench, then lets `AiWorkbench` own the remaining-height vertical scroller; workspace blocks and Visual Lab content should not reintroduce fixed `height: 100%` clipping inside that scroll flow.
 - Visual module with S/B/A output: S mode is now the preferred generated view for sanitized SVG principle/structure diagrams, B mode is the sandboxed HTML/JS teaching lesson, and A mode remains the structured React/SVG fallback.
@@ -36,7 +36,7 @@ Last updated: 2026-05-02
 - Visual Lab B fallback lessons include a principle canvas, dynamic mechanism view, parameter controls, live metrics, clickable/autoplay steps, and takeaway strip.
 - Visual Lab A mode now uses a local parameter-driven simulation engine, so slider changes recompute and redraw teaching visuals such as K/V cache blocks, token interleaving, transfer blocks, GPU lanes, metric cards, and flow speed.
 - Visual Lab A mode also supports declarative `visualElements`, allowing generated scenes to render richer non-flowchart diagrams such as architecture blocks, matrices, layer stacks, formulas, bars, brackets, axes, annotations, and arrows.
-- Visual Lab standalone generation now asks for both structured `VisualSpec` data and a teaching-oriented self-contained HTML/JS demo with visible controls and a recomputation loop, isolated in the existing iframe sandbox.
+- Visual Lab standalone generation now asks for structured `VisualSpec` data first, then runs separate generation for a sanitized inline SVG principle diagram and a teaching-oriented self-contained HTML/JS demo with visible controls and a recomputation loop.
 - VisualLab and AiWorkbench parse model JSON through `parseModelJsonObject`, which extracts fenced JSON, removes trailing commas, repairs common missing-comma boundaries, and reports clearer parse hints.
 - `parseModelJsonObject` now handles a common model error where an array of objects ends with a value such as `"unit": "GB/s" }` and then starts the next property without the missing `],`.
 - Added renderer/main logging: `window.paperSuper.log` forwards renderer logs to `paperSuper:log`, and Electron main writes daily logs under `userData/logs/`.
@@ -76,4 +76,4 @@ Last updated: 2026-05-02
 
 ## Verification Snapshot
 
-`npm run build` should be rerun after the 2026-05-02 S-mode SVG principle diagram and logging changes if this handoff is used as the next-stage starting point.
+`npm run build` passed on 2026-05-02 after the S-mode SVG principle diagram, logging bridge, and documentation sync.

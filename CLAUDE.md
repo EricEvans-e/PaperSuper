@@ -45,7 +45,7 @@ Renderer (React)  →  window.paperSuper (preload bridge, 6 methods)  →  Elect
 | `apps/desktop/electron/logger.ts` | Best-effort main/renderer file logging under Electron `userData/logs` |
 | `apps/desktop/src/App.tsx` | Root component. Owns all top-level state, three-zone grid layout, split-handle resizing, localStorage persistence |
 | `apps/desktop/src/components/AiWorkbench.tsx` | Generates `WorkspaceSpec` JSON from AI, renders page-style workspace with Overview/Visual/Formula/Experiment/Insight blocks |
-| `apps/desktop/src/components/VisualLab.tsx` | Largest file (~5K lines). Visual module with A/B modes. B mode: sandboxed iframe HTML/JS via two-stage AI. A mode: structured React/SVG with mechanism scenes, simulations |
+| `apps/desktop/src/components/VisualLab.tsx` | Largest file (~5K lines). Visual module with S/B/A modes. S mode: sanitized AI SVG principle diagrams. B mode: sandboxed iframe HTML/JS via separate AI code generation. A mode: structured React/SVG with mechanism scenes and simulations |
 | `apps/desktop/src/components/PdfReaderPane.tsx` | PDF viewer with text/sentence click-to-context, Alt-drag region extraction, highlight translation, PDF-only zoom |
 | `apps/desktop/src/utils.ts` | `parseModelJsonObject()` — defensive JSON parser handling fenced code blocks, trailing commas, and missing commas with stack-based repair |
 | `apps/desktop/src/log.ts` | Renderer logging helper that prints to DevTools and forwards to `window.paperSuper.log` |
@@ -84,7 +84,7 @@ These are the critical rules to follow when modifying code:
 - `AiWorkbench` requests structured `WorkspaceSpec` JSON only. **Never put HTML, JS, CSS, SVG, or executable code inside Workbench JSON.**
 - Visual Lab is the visual block within the workbench, not the whole right-side product.
 - **S mode is the preferred generated view** for paper-style principle/structure diagrams. Preserve the S/B/A mode split and default to S after successful full generation.
-- **Two-stage AI generation**: first parse structured `VisualSpec` JSON, then a separate AI call for raw HTML/SVG/JS (B mode). Falls back to local lessons when raw HTML is missing or unsafe.
+- **Multi-track visual generation**: first parse structured `VisualSpec` JSON, then request sanitized inline SVG for S mode and raw HTML/SVG/JS for B mode. B mode falls back to local lessons when raw HTML is missing or unsafe.
 - A-mode `VisualSpec` can include `mechanismBrief`, `principleDiagram`, `scene`, `semantic`, `visualElements`, `nodes`/`edges`. `scene` is the preferred mechanism-first track.
 - Do not trust AI-provided `scene` coordinates — keep `normalizeMechanismScene`, region fallback, placement inheritance, and unit reindexing in place.
 - A-mode parameters must flow through `computeVisualSimulation`; sliders must visibly recompute local state.
