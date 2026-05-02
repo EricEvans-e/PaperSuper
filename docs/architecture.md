@@ -57,9 +57,10 @@ Renderer React UI
 - `apps/desktop/src/components/VisualLab.tsx`
   - Renders the Visual module inside the right AI Workbench.
   - Provides S/B/A modes. S mode is the preferred generated view for paper-style SVG principle/structure diagrams.
-  - S mode asks AI for a single inline `<svg>`, sanitizes it, and renders it as the static principle diagram.
+  - S mode uses a two-phase multi-facet generation: Phase 1 asks AI for 3-4 facet definitions `[{title, focus}]`, Phase 2 generates each facet's SVG in parallel with progressive loading.
+  - S mode renders facets as switchable tabs with Ctrl+wheel zoom (0.3x–3x), double-click reset, and expand/collapse toggle.
   - B mode renders a self-contained HTML/JS teaching lesson inside a sandboxed iframe.
-  - Generates B-mode code through a second raw-HTML AI call after structured `VisualSpec` JSON is parsed, avoiding large HTML/CSS/JS strings inside JSON.
+  - Generates B-mode code through a manual raw-HTML AI call after structured `VisualSpec` JSON is available, avoiding large HTML/CSS/JS strings inside JSON.
   - Generates a local B-mode fallback lesson from safe `VisualSpec` data when raw AI HTML is missing, unsafe, or too incomplete to teach the selected mechanism.
   - Keeps A mode as the structured React/SVG fallback with playback state, focused steps, and parameter sliders.
   - A mode prefers `mechanismBrief`, `principleDiagram`, and the `VisualSpec.scene` mechanism track when present, rendering regions, units, operations, and active steps through local React/SVG.
@@ -76,6 +77,7 @@ Renderer React UI
 - `apps/desktop/src/utils.ts`
   - Provides shared renderer helpers.
   - `parseModelJsonObject` extracts model JSON from fenced/plain responses, repairs common comma issues, and throws clearer diagnostics when parsing still fails.
+  - `extractJsonCandidate` supports both `{...}` objects and `[...]` arrays — arrays are extracted when `[` appears before the first `{`.
 - `apps/desktop/src/log.ts`
   - Logs to renderer DevTools and forwards structured log events to main through `window.paperSuper.log`.
 
@@ -138,26 +140,30 @@ Renderer React UI
 12. The Formula module renders expression, plain-language explanation, variables, and derivation steps.
 13. The Experiment module renders parameter sliders, local computed metrics, a lightweight teaching curve, and observations.
 14. The Insight module renders key points, assumptions, limitations, and next questions.
-15. VisualLab generates two AI visual tracks in parallel after `VisualSpec` is parsed: raw HTML for B mode and inline SVG for S mode.
-16. S mode asks the current AI provider for a single `<svg>` paper-style principle diagram, then `sanitizeSvg` removes scripts, event handlers, `foreignObject`, external links, and overlong payloads before rendering.
-17. After full Generate, VisualLab switches to S mode by default so the first result is an原理图/结构图 rather than a generic flow diagram.
-18. B mode asks for raw self-contained HTML/SVG/JS code, not JSON.
-19. `extractHtmlFragment` accepts raw HTML or a single fenced ```html block, strips document wrappers, and passes the fragment to `normalizeHtmlDemo`.
-20. If the raw HTML passes the unsafe/incomplete-demo check, B mode renders it in the iframe sandbox with CSP.
-21. If raw HTML is missing, unsafe, or too incomplete to teach the mechanism, B mode generates a local self-contained teaching lesson from the structured `VisualSpec`.
-22. The fallback lesson chooses a layout tendency from the semantic/template/title, such as memory prefetch, attention matrix, architecture, comparison, or generic mechanism.
-23. KV interleaving/consolidation has a dedicated B-mode fallback lesson: separated K cache / V cache rows, animated K_i + V_i pairing, interleaved `[K_i|V_i]` output, token/group/speed sliders, and live I/O reduction metrics.
-24. A mode draws the structured fallback scene with React/SVG instead of executing generated code.
-25. A mode prefers `mechanismBrief`, `principleDiagram`, and `VisualSpec.scene` for mechanism-first diagrams. The renderer turns AI-provided regions, units, operations, and steps into a stable SVG animation.
-26. `normalizeMechanismScene` treats model coordinates as flexible input: `0..1` values become normalized canvas coordinates, `0..100` values become percentages, and invalid or heavily overlapping regions fall back to a stable local layout.
-27. Scene unit placement inherits missing `lane` / `index` values, reindexes units by region/lane, and applies KV-specific lanes for K cache, V cache, and interleaved `[K|V]` outputs.
-28. A mode falls back to semantic diagrams or the legacy visual canvas when no `scene` exists.
-29. A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
-30. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
-31. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
-32. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
-33. B-mode HTML demos remain isolated in the existing iframe sandbox.
-34. If generation fails or JSON is invalid, the panel keeps a local preview workspace and displays the error.
+15. VisualLab receives the validated `VisualSpec` and shows local preview/fallback content without calling AI again.
+16. When the user clicks VisualLab `生成可视化`, VisualLab generates three AI visual tracks in parallel: raw HTML for B mode, multi-facet SVG for S mode, and a text explanation.
+17. S mode Phase 1 asks AI for 3-4 facet definitions `[{title, focus}]` identifying distinct visual aspects of the concept.
+18. S mode Phase 2 generates each facet's `<svg>` in parallel. Each facet completes independently; `setSvgFacets` updates progressively so the first-to-return facet displays immediately as a switchable tab.
+19. Each facet's SVG is sanitized by `sanitizeSvg` which removes scripts, event handlers, `foreignObject`, external links, and overlong payloads before rendering.
+20. After manual visual generation succeeds, VisualLab switches to S mode by default so the first generated result is a principle diagram rather than a generic flow diagram.
+21. S mode SVG supports Ctrl+wheel zoom (0.3x–3x), double-click reset, and an expand/collapse toolbar.
+22. B mode asks for raw self-contained HTML/SVG/JS code, not JSON.
+23. `extractHtmlFragment` accepts raw HTML or a single fenced ```html block, strips document wrappers, and passes the fragment to `normalizeHtmlDemo`.
+24. If the raw HTML passes the unsafe/incomplete-demo check, B mode renders it in the iframe sandbox with CSP.
+25. If raw HTML is missing, unsafe, or too incomplete to teach the mechanism, B mode generates a local self-contained teaching lesson from the structured `VisualSpec`.
+26. The fallback lesson chooses a layout tendency from the semantic/template/title, such as memory prefetch, attention matrix, architecture, comparison, or generic mechanism.
+27. KV interleaving/consolidation has a dedicated B-mode fallback lesson: separated K cache / V cache rows, animated K_i + V_i pairing, interleaved `[K_i|V_i]` output, token/group/speed sliders, and live I/O reduction metrics.
+28. A mode draws the structured fallback scene with React/SVG instead of executing generated code.
+29. A mode prefers `mechanismBrief`, `principleDiagram`, and `VisualSpec.scene` for mechanism-first diagrams. The renderer turns AI-provided regions, units, operations, and steps into a stable SVG animation.
+30. `normalizeMechanismScene` treats model coordinates as flexible input: `0..1` values become normalized canvas coordinates, `0..100` values become percentages, and invalid or heavily overlapping regions fall back to a stable local layout.
+31. Scene unit placement inherits missing `lane` / `index` values, reindexes units by region/lane, and applies KV-specific lanes for K cache, V cache, and interleaved `[K|V]` outputs.
+32. A mode falls back to semantic diagrams or the legacy visual canvas when no `scene` exists.
+33. A mode renders `nodes` / `edges` for flow-like explanations and overlays safe declarative `visualElements` when the passage needs structure diagrams, attention matrices, tensor grids, formulas, brackets, bars, or annotations.
+34. A-mode parameter sliders update `parameterValues`, then `computeVisualSimulation` recomputes a local teaching simulation.
+35. The simulation state drives visible SVG changes: K/V cache block counts, token-wise interleaving blocks, block transfer count, GPU lane count, metric cards, and packet animation speed.
+36. Individual `visualElements` can bind to a `parameterId`, allowing sliders to change matrix intensity, layer count, circle size, bar fill, or rectangle size without executing generated code.
+37. B-mode HTML demos remain isolated in the existing iframe sandbox.
+38. If generation fails or JSON is invalid, the panel keeps a local preview workspace and displays the error.
 
 ### Global UI Zoom
 
@@ -213,6 +219,7 @@ The shared renderer/main request contracts live in `apps/desktop/src/types.ts`.
 - `VisualMechanismScene`: mechanism-first visual scene with regions, units, operations, placements, and teaching steps
 - `VisualHtmlDemo`: self-contained HTML/JS demo rendered only inside the Visual Lab iframe sandbox
 - Sanitized SVG principle diagram: renderer state only, generated by the S-mode AI request and never persisted in `VisualSpec`
+- `SvgFacet`: multi-facet SVG state with `title`, `focus`, `svg`, `status`, and `error` fields; S mode generates 3-4 facets in parallel
 - `VisualSimulationSpec`: optional model hint for the local Visual Lab simulation engine
 - `VisualElement`: safe declarative SVG primitive for richer A-mode diagrams
 - `VisualNode`, `VisualEdge`, `VisualParameter`, and `VisualStep`: renderer-owned visual scene primitives
@@ -232,8 +239,8 @@ The app uses a dark IDE shell with a light PDF reading pane. The workspace has:
 - Center PDF pane.
 - Right reserved workbench pane for Paper, AI, and Settings tools.
 - Right AI Workbench includes a page-style Overview plus Visual, Formula, Experiment, and Insight blocks.
-- The Visual module includes Visual Lab with S/B/A mode switching. S is the preferred generated mode for static principle/structure diagrams.
-- B mode uses safe raw AI HTML generated in a second step and otherwise generates a local fallback lesson from `VisualSpec`.
+- The Visual module includes Visual Lab with S/B/A mode switching. S is the preferred generated mode for multi-facet principle/structure diagrams with tab switching and Ctrl+wheel zoom.
+- B mode uses safe raw AI HTML generated only after the user manually requests visual generation and otherwise generates a local fallback lesson from `VisualSpec`.
 - A-mode local SVG rendering remains available as a manual structured fallback; it prefers `principleDiagram` and mechanism `scene` diagrams, then semantic diagrams, and can still combine flow nodes, edges, simulation layers, and declarative visual elements for non-flowchart diagrams.
 - Draggable vertical split handles between left/PDF and PDF/right zones.
 - Compact chat styling at narrow widths, with auto-collapse below the threshold and same-drag reopen when the pointer moves back right.

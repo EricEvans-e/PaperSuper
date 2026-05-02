@@ -45,9 +45,9 @@ Renderer (React)  →  window.paperSuper (preload bridge, 6 methods)  →  Elect
 | `apps/desktop/electron/logger.ts` | Best-effort main/renderer file logging under Electron `userData/logs` |
 | `apps/desktop/src/App.tsx` | Root component. Owns all top-level state, three-zone grid layout, split-handle resizing, localStorage persistence |
 | `apps/desktop/src/components/AiWorkbench.tsx` | Generates `WorkspaceSpec` JSON from AI, renders page-style workspace with Overview/Visual/Formula/Experiment/Insight blocks |
-| `apps/desktop/src/components/VisualLab.tsx` | Largest file (~5K lines). Visual module with S/B/A modes. S mode: sanitized AI SVG principle diagrams. B mode: sandboxed iframe HTML/JS via separate AI code generation. A mode: structured React/SVG with mechanism scenes and simulations |
+| `apps/desktop/src/components/VisualLab.tsx` | Largest file (~6K lines). Visual module with S/B/A modes. S mode: multi-facet AI SVG principle diagrams with tab switching, Ctrl+wheel zoom, and progressive loading. B mode: sandboxed iframe HTML/JS via separate AI code generation. A mode: structured React/SVG with mechanism scenes and simulations |
 | `apps/desktop/src/components/PdfReaderPane.tsx` | PDF viewer with text/sentence click-to-context, Alt-drag region extraction, highlight translation, PDF-only zoom |
-| `apps/desktop/src/utils.ts` | `parseModelJsonObject()` — defensive JSON parser handling fenced code blocks, trailing commas, and missing commas with stack-based repair |
+| `apps/desktop/src/utils.ts` | `parseModelJsonObject()` — defensive JSON parser handling fenced code blocks, trailing commas, missing commas, and JSON arrays (not just objects) with stack-based repair |
 | `apps/desktop/src/log.ts` | Renderer logging helper that prints to DevTools and forwards to `window.paperSuper.log` |
 | `apps/desktop/src/visualSimulation.ts` | Local parameter-driven simulation engine for A-mode Visual Lab |
 | `apps/desktop/src/types.ts` | All shared type contracts |
@@ -83,8 +83,11 @@ These are the critical rules to follow when modifying code:
 
 - `AiWorkbench` requests structured `WorkspaceSpec` JSON only. **Never put HTML, JS, CSS, SVG, or executable code inside Workbench JSON.**
 - Visual Lab is the visual block within the workbench, not the whole right-side product.
-- **S mode is the preferred generated view** for paper-style principle/structure diagrams. Preserve the S/B/A mode split and default to S after successful full generation.
-- **Multi-track visual generation**: first parse structured `VisualSpec` JSON, then request sanitized inline SVG for S mode and raw HTML/SVG/JS for B mode. B mode falls back to local lessons when raw HTML is missing or unsafe.
+- **S mode is the preferred generated view** for paper-style principle/structure diagrams after the user manually requests visual generation. Preserve the S/B/A mode split and prefer S after successful visual generation.
+- **S mode uses multi-facet SVG generation**: Phase 1 asks AI for 3-4 facet definitions `[{title, focus}]`, Phase 2 generates each facet's SVG in parallel. Facets display as switchable tabs with progressive loading (first-to-return shows first). Uses `SvgFacet[]` state and `FacetSvgRenderer`.
+- **S mode SVG supports Ctrl+wheel zoom** (0.3x–3x) and double-click reset. Toolbar shows zoom percentage, 1:1 reset, and expand/collapse toggle.
+- **Manual multi-track visual generation**: first parse or receive structured `VisualSpec` JSON, then only after the user clicks the VisualLab generation button request sanitized inline SVG for S mode and raw HTML/SVG/JS for B mode. B mode falls back to local lessons when raw HTML is missing or unsafe.
+- **Do not auto-call AI from VisualLab on context/spec changes.** Selecting PDF text or receiving `specOverride` should show a local preview until the user clicks `生成可视化` / `Generate`.
 - A-mode `VisualSpec` can include `mechanismBrief`, `principleDiagram`, `scene`, `semantic`, `visualElements`, `nodes`/`edges`. `scene` is the preferred mechanism-first track.
 - Do not trust AI-provided `scene` coordinates — keep `normalizeMechanismScene`, region fallback, placement inheritance, and unit reindexing in place.
 - A-mode parameters must flow through `computeVisualSimulation`; sliders must visibly recompute local state.
@@ -103,4 +106,4 @@ These are the critical rules to follow when modifying code:
 
 - `react-pdf-highlighter/` is vendored source committed directly, not a submodule.
 - Prefer app-level wrappers before editing vendored internals. The import bridge is `apps/desktop/src/pdf-highlighter.ts`.
-- Use `parseModelJsonObject` for any AI JSON that may be fenced, have trailing commas, or missing commas. Keep the stack-based array/property repair intact.
+- Use `parseModelJsonObject` for any AI JSON that may be fenced, have trailing commas, or missing commas. Keep the stack-based array/property repair intact. `extractJsonCandidate` supports both `{...}` objects and `[...]` arrays — do not remove the array-first extraction logic.

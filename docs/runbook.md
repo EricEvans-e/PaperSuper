@@ -53,20 +53,22 @@ npm run preview
 19. Open the AI activity in the right workbench and confirm the AI Workbench renders a preview workspace.
 20. Confirm the right workbench has a visible scrollbar when content exceeds the available height.
 21. Use the compact block navigator and confirm it scrolls to Overview, Visual, Formula, Experiment, and Insight blocks.
-22. In the Visual module, click `Generate` and confirm S mode becomes active when generation completes.
-23. In S mode, confirm the result is a detailed principle/structure SVG diagram rather than a small node-link flowchart.
-24. Switch to B mode, move the sliders, and confirm the principle canvas, animation/highlighted blocks, live metrics, and step explanation update without leaving the sandbox.
-25. Switch to A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
-26. In Visual A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
-27. In the Formula module, confirm expression, variables, and derivation steps fit and scroll if needed.
-28. In the Experiment module, move sliders and confirm metrics plus the teaching curve update locally.
-29. In the Insight module, confirm key points, assumptions, limitations, and next questions are visible.
-30. Click an Overview suggested action and confirm the page scrolls to the target block.
-31. Alt-drag a paragraph/table text region, click `Generate`, and confirm the AI Workbench requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
-32. Ask the AI chat to translate or explain the selected context.
-33. Confirm streaming output appears as Markdown.
-34. Check DevTools and the Electron `userData/logs/papersuper-YYYY-MM-DD.log` file for renderer/main log lines when diagnosing generation failures.
-35. Run `npm run build`.
+22. Confirm selecting PDF text only updates highlights/local preview and does not automatically send VisualLab S/B generation requests.
+23. In the right AI Workbench, click `Generate` and confirm it requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
+24. In the Visual module, click `生成可视化` and confirm S mode becomes active when generation completes.
+25. In S mode, confirm multiple facet tabs appear (3-4 tabs with Chinese titles like "整体架构", "数据流"). Click each tab and confirm each shows a different focused SVG diagram.
+26. In S mode, hold `Ctrl` and scroll the mouse wheel over the SVG area; confirm the diagram zooms in/out (0.3x–3x range). Double-click the SVG to reset to 100%. Confirm the toolbar shows the current zoom percentage and a 1:1 reset button.
+27. Switch to B mode, move the sliders, and confirm the principle canvas, animation/highlighted blocks, live metrics, and step explanation update without leaving the sandbox.
+28. Switch to A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
+29. In Visual A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
+30. In the Formula module, confirm expression, variables, and derivation steps fit and scroll if needed.
+31. In the Experiment module, move sliders and confirm metrics plus the teaching curve update locally.
+32. In the Insight module, confirm key points, assumptions, limitations, and next questions are visible.
+33. Click an Overview suggested action and confirm the page scrolls to the target block.
+34. Ask the AI chat to translate or explain the selected context.
+35. Confirm streaming output appears as Markdown.
+36. Check DevTools and the Electron `userData/logs/papersuper-YYYY-MM-DD.log` file for renderer/main log lines when diagnosing generation failures.
+37. Run `npm run build`.
 
 ## AI Configuration
 
@@ -145,15 +147,30 @@ Check:
 
 In development, `AiWorkbench` dispatches `papersuper:learning-event` browser events and logs them with `console.debug`. Check the browser devtools console and event listeners before adding persistence.
 
-### Visual module S mode is blank or still looks like a flowchart
+### Visual module S mode is blank or only shows one facet
 
 Check:
 
-- The Generate flow should call `generateSvgDiagram` after `VisualSpec` parsing and switch to S mode when generation completes.
-- `buildVisualSvgPrompt` should ask for a single inline `<svg>` principle diagram with spatial semantics, nested containment, arrow styles, annotations, and metrics.
+- Selecting PDF context or loading a `VisualSpec` should not call `generateSvgFacets`; only the VisualLab `生成可视化` / standalone `Generate` action should do that.
+- The manual visual-generation flow should call `generateSvgFacets` which runs Phase 1 (facet definitions) then Phase 2 (parallel SVG generation).
+- `buildSvgFacetsPrompt` should ask AI for a JSON array `[{title, focus}]` with 3-4 distinct facets.
+- `extractJsonCandidate` must support `[...]` arrays (not just `{...}` objects). If Phase 1 returns a JSON array and parsing fails, check that the array-first extraction path is intact.
+- Phase 1 `maxTokens` should be at least 8000 to prevent truncated facet definitions.
+- If only one facet appears, check the logs for `generateSvgFacets phase 1 failed` — this means the facet definition JSON was unparseable and fell back to a single default facet.
+- `buildFacetSvgPrompt` should focus each facet on a distinct aspect (architecture, data flow, performance, etc.).
 - `extractSvgDiagram` should accept a raw `<svg>` or fenced ```svg block.
 - `sanitizeSvg` should reject unsafe or oversized SVG but keep valid diagrams. It strips scripts, event handlers, `foreignObject`, external hrefs, and unsafe URL references.
-- If S mode fails, the UI should show the SVG error state rather than silently falling back to a simple flowchart.
+- Individual facet failures should not block other facets. Check logs for `generateSvgFacets facet failed` to see which facet had issues.
+- If S mode fails entirely, the UI should show the SVG error state rather than silently falling back to a simple flowchart.
+
+### SVG zoom does not work
+
+Check:
+
+- Ctrl+wheel zoom requires the `onWheel` handler on `.visualSvgDiagram` in `FacetSvgRenderer`.
+- The zoom range is 0.3x–3x, applied via CSS `transform: scale(zoom)`.
+- Double-click should reset zoom to 1.0.
+- The toolbar should show the current zoom percentage and a 1:1 reset button.
 
 ### Visual module sliders do not change the scene
 
@@ -179,7 +196,7 @@ Check:
 
 ### AI Workbench generation times out
 
-The main Workbench generation should request a structured `WorkspaceSpec` only. It must not include HTML, JavaScript, CSS, SVG markup, executable code, or `htmlDemo`. VisualLab generates S-mode SVG and B-mode raw HTML through separate follow-up calls after structured JSON succeeds. If timeouts return, check the selected model speed, `maxTokens`, selected context length, and whether the JSON-stage prompt accidentally started requesting executable content.
+The main Workbench generation should request a structured `WorkspaceSpec` only. It must not include HTML, JavaScript, CSS, SVG markup, executable code, or `htmlDemo`. VisualLab generates S-mode SVG and B-mode raw HTML only after the user clicks `生成可视化` / standalone `Generate`. If timeouts return, check the selected model speed, `maxTokens`, selected context length, and whether the JSON-stage prompt accidentally started requesting executable content.
 
 ### Visual module B mode looks unsafe or tries to load resources
 
@@ -191,7 +208,7 @@ If B mode is blank or too simple, check:
 - `normalizeHtmlDemo` should fall back to `createFallbackHtmlDemo` when raw HTML is missing, lacks a range slider, lacks `recalc()`, lacks a drawing surface, or contains obvious unsafe patterns such as external scripts, `fetch`, WebSocket, `import`, `eval`, or `new Function`.
 - For KV scenes, `normalizeHtmlDemo` also checks for K/V/interleaving structure before accepting AI HTML.
 - `createFallbackHtmlDemo` should still produce a complete teaching lesson from the structured `VisualSpec`.
-- `AiWorkbench` should not request `htmlDemo`; standalone `VisualLab` asks for S-mode inline SVG and B-mode raw HTML/SVG/JS after the structured JSON is parsed.
+- `AiWorkbench` should not request `htmlDemo`; `VisualLab` asks for S-mode inline SVG and B-mode raw HTML/SVG/JS only from the manual visual-generation action after structured JSON is available.
 
 ### Renderer logs are missing from the log file
 
@@ -207,7 +224,7 @@ Check:
 Check:
 
 - `VisualLab` and `AiWorkbench` should parse model output through `parseModelJsonObject` in `apps/desktop/src/utils.ts`.
-- The helper strips fenced JSON, extracts the outer object, removes trailing commas, and repairs common missing comma boundaries.
+- The helper strips fenced JSON, extracts the outer object or array, removes trailing commas, and repairs common missing comma boundaries.
 - If the error points near an object inside an array such as `"unit": "GB/s" }`, the model may have ended an array item and started the next property without `],`; keep the stack-based repair path in place.
 - If parsing still fails, reduce `maxTokens` pressure or ask the model to regenerate strict JSON.
 

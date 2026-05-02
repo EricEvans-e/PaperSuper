@@ -37,15 +37,16 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
   - First-pass UI actions support focusing workspace blocks, returning to selected PDF context later, and opening a future learning report.
   - Lightweight learning events are dispatched for workspace generation, module views, actions, and slider changes.
 - The Visual module includes Visual Lab S/B/A output:
-  - S mode is the preferred generated view. It asks AI for a single inline SVG principle/structure diagram, sanitizes the SVG, then renders it directly as a paper-style mechanism figure.
+  - S mode is the preferred generated view. After the user manually clicks the visual generation button, it uses two-phase multi-facet generation: Phase 1 asks AI for 3-4 facet definitions, Phase 2 generates each facet's SVG in parallel with progressive loading. Facets display as switchable tabs with Ctrl+wheel zoom (0.3x–3x) and expand/collapse toggle.
   - B mode renders a self-contained HTML/JS teaching lesson inside an iframe sandbox, with a principle canvas, playable mechanism animation, parameter controls, live metrics, steps, and a takeaway strip.
-  - B mode uses two-stage AI generation: structured `VisualSpec` JSON first, then a separate raw HTML/SVG/JS request so complex visualization code is not embedded inside JSON strings.
+  - B mode uses a manual follow-up AI generation step: structured `VisualSpec` JSON first, then the VisualLab `生成可视化` action can request raw HTML/SVG/JS so complex visualization code is not embedded inside JSON strings.
   - If the AI does not provide safe and complete raw HTML content, B mode automatically builds a local fallback lesson from `VisualSpec` instead of showing a blank or unsafe demo.
+  - Selecting PDF text only prepares context and local preview; it does not automatically ask AI to generate S/B visual assets.
   - KV interleaving/consolidation gets a dedicated B-mode fallback: separated K cache / V cache rows, animated K_i + V_i pairing, interleaved `[K_i|V_i]` output, token/group/speed sliders, and live I/O reduction metrics.
   - A mode remains available as the structured fallback. It renders validated `VisualSpec` data with local React/SVG playback, parameter sliders, `mechanismBrief`, `principleDiagram`, `scene`, `semantic`, and `visualElements`.
   - The A-mode `scene` renderer normalizes model-provided coordinates, detects broken or overlapping layouts, and falls back to stable local placement for cases such as KV cache K/V lanes and interleaved `[K|V]` units.
   - A mode also supports safe declarative `visualElements` for richer diagrams such as model architecture blocks, matrices, layer stacks, formula callouts, brackets, bars, axes, annotations, and arrows.
-- AI-generated JSON for Visual Lab and the AI Workbench is extracted and lightly repaired before parsing, so common model mistakes such as fenced output, trailing commas, or missing commas fail with clearer diagnostics.
+- AI-generated JSON for Visual Lab and the AI Workbench is extracted and lightly repaired before parsing, so common model mistakes such as fenced output, trailing commas, or missing commas fail with clearer diagnostics. The JSON extractor supports both `{...}` objects and `[...]` arrays.
 - Global UI zoom uses `Ctrl/Cmd + +` or `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, and `Ctrl/Cmd + 0`, with the zoom factor persisted by Electron.
 - PDF reader zoom uses `Ctrl/Cmd + mouse wheel` inside the paper pane, affects only the PDF view, and keeps existing highlights aligned after scaling.
 

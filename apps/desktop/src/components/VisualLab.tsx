@@ -1,4 +1,6 @@
 import {
+  Maximize2,
+  Minimize2,
   Pause,
   Play,
   RotateCcw,
@@ -8,12 +10,15 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type {
   AiMessage,
   AiContextItem,
   ModelConfig,
   PaperDocument,
   PaperTextPage,
+  SvgFacet,
   VisualEdge,
   VisualDiagramType,
   VisualElement,
@@ -370,6 +375,8 @@ const buildVisualHtmlPrompt = ({
   spec: VisualSpec;
 }) =>
   [
+    // B 模式的核心：这里不是让模型返回 JSON，而是让模型直接写一段
+    // 可运行的 HTML/SVG/JS 课件代码；后面会先做安全/完整性检查，再放进 iframe。
     "You are writing the visual code for PaperSuper Visual Lab.",
     "Return ONLY a self-contained HTML BODY fragment. Do not return JSON. Do not wrap in Markdown unless using a single ```html fenced block.",
     "The fragment may include inline <style>, ordinary HTML, inline <svg>, and inline <script>.",
@@ -414,6 +421,8 @@ const buildVisualHtmlPrompt = ({
   ].join("\n");
 
 const extractHtmlFragment = (text: string) => {
+  // 兼容模型直接返回 HTML 或 ```html 代码块；这里仅做外壳剥离，
+  // 真正的“能不能展示”交给 normalizeHtmlDemo 和 iframe sandbox 决定。
   const fenced = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
   const candidate = (fenced?.[1] ?? text).trim();
   if (!candidate) {
@@ -723,7 +732,7 @@ const extractSvgDiagram = (text: string): string | null => {
   return sanitizeSvg(svgMatch ? svgMatch[0] : candidate);
 };
 
-const buildVisualSvgPrompt = ({
+const buildSvgExplanationPrompt = ({
   activeContext,
   paper,
   paperContext,
@@ -735,105 +744,169 @@ const buildVisualSvgPrompt = ({
   spec: VisualSpec;
 }) =>
   [
+    "You are a scientific principle explainer for PaperSuper, a PDF research IDE.",
+    "Your job is to write a clear, structured explanation of a principle diagram AND the underlying technical concept from the paper.",
+    "Write in Markdown format. Use Simplified Chinese for explanations, keep English for technical terms.",
+    "",
+    "## Output Structure",
+    "",
+    "Your response MUST follow this exact structure with these three H2 sections:",
+    "",
+    "### Section 1: 图解说明",
+    "Explain what the diagram shows:",
+    "- What each major region/area represents (e.g. off-chip memory, on-chip compute, GPU HBM)",
+    "- What the arrows and data flows mean (solid = primary flow, dashed = secondary/cached, dotted = control signal)",
+    "- What the color coding signifies (red = bottleneck, green = optimized, blue = information, amber = cache/memory)",
+    "- Key quantitative annotations if present (dimensions, bandwidths, latencies)",
+    "- The metric panel or summary box contents",
+    "",
+    "### Section 2: 核心原理",
+    "Explain the underlying technical principle in accessible language:",
+    "- What problem does this mechanism solve?",
+    "- How does it work step by step?",
+    "- What are the key objects/concepts involved and how do they interact?",
+    "- What is the insight or innovation compared to naive approaches?",
+    "",
+    "### Section 3: 关键要点",
+    "Summarize as 3-5 bullet points:",
+    "- Each point should be one concise sentence",
+    "- Focus on the most important takeaways a reader should remember",
+    "- Include quantitative details where available",
+    "",
+    "## Writing Guidelines",
+    "",
+    "- Be precise and technical, but explain concepts clearly",
+    "- Use analogies sparingly and only when they genuinely help",
+    "- Reference specific elements from the diagram when explaining",
+    "- Keep the total response under 800 words",
+    "- Use Markdown formatting: ## headers, - bullet points, **bold** for emphasis, `code` for technical terms",
+    "",
+    `Paper title: ${paper.title || "Untitled PDF"}`,
+    `Selected page: ${activeContext.pageNumber || "unknown"}`,
+    "Selected passage:",
+    activeContext.text,
+    "",
+    "Paper context excerpt:",
+    paperContext,
+    "",
+    "Structured diagram data for reference:",
+    JSON.stringify({
+      title: spec.title,
+      diagramType: spec.diagramType,
+      diagramPurpose: spec.diagramPurpose,
+      readerTakeaway: spec.readerTakeaway,
+      mechanismBrief: spec.mechanismBrief,
+      principleDiagram: spec.principleDiagram,
+      scene: spec.scene,
+      summary: spec.summary,
+    }),
+  ].join("\n");
+
+const buildSvgFacetsPrompt = ({
+  activeContext,
+  paper,
+  paperContext,
+  spec,
+}: {
+  activeContext: AiContextItem;
+  paper: PaperDocument;
+  paperContext: string;
+  spec: VisualSpec;
+}) =>
+  [
+    "You are a scientific illustration planner for PaperSuper, a PDF research IDE.",
+    "Analyze the paper concept below and identify 3-4 DISTINCT visual facets (aspects) that would each benefit from a separate, focused SVG diagram.",
+    "Return ONLY a JSON array. No Markdown fencing, no explanation text.",
+    "",
+    "## Output Format",
+    "",
+    'Return a JSON array: `[{"title": "...", "focus": "..."}, ...]`',
+    "- title: short Chinese label for the tab (2-4 chars, e.g. '整体架构', '数据流', '性能瓶颈', '计算过程')",
+    "- focus: one-sentence description of what this facet's SVG should depict",
+    "",
+    "## Guidelines",
+    "",
+    "- Each facet should be a DISTINCT perspective on the same concept, not overlapping views",
+    "- Facet 1 should be the 'big picture' / structural overview",
+    "- Other facets should zoom into specific mechanisms, data flows, performance trade-offs, or mathematical relationships",
+    "- Order from most宏观 to most微观",
+    "- Use Chinese for titles, English for technical terms in focus descriptions",
+    "",
+    `Paper title: ${paper.title || "Untitled PDF"}`,
+    `Selected page: ${activeContext.pageNumber || "unknown"}`,
+    "Selected passage:",
+    activeContext.text,
+    "",
+    "Paper context excerpt:",
+    paperContext,
+    "",
+    "Structured data for reference:",
+    JSON.stringify({
+      title: spec.title,
+      diagramType: spec.diagramType,
+      diagramPurpose: spec.diagramPurpose,
+      readerTakeaway: spec.readerTakeaway,
+      mechanismBrief: spec.mechanismBrief,
+      principleDiagram: spec.principleDiagram,
+      scene: spec.scene,
+      summary: spec.summary,
+    }),
+  ].join("\n");
+
+const buildFacetSvgPrompt = ({
+  activeContext,
+  paper,
+  paperContext,
+  spec,
+  facetTitle,
+  facetFocus,
+  facetIndex,
+  totalFacets,
+}: {
+  activeContext: AiContextItem;
+  paper: PaperDocument;
+  paperContext: string;
+  spec: VisualSpec;
+  facetTitle: string;
+  facetFocus: string;
+  facetIndex: number;
+  totalFacets: number;
+}) =>
+  [
     "You are a scientific illustration engine for PaperSuper, a PDF research IDE.",
-    "Generate a SINGLE inline <svg> element that serves as a detailed PRINCIPLE DIAGRAM for the paper concept below.",
+    `Generate a SINGLE inline <svg> element that serves as a focused diagram for the "${facetTitle}" facet of a paper concept.`,
     "Return ONLY the <svg>...</svg> element. No JSON, no Markdown fencing, no explanation text outside the SVG.",
+    "",
+    `## Facet Focus (facet ${facetIndex + 1} of ${totalFacets})`,
+    "",
+    `**Title:** ${facetTitle}`,
+    `**Focus:** ${facetFocus}`,
+    "",
+    "Your diagram should ONLY depict the aspect described above. Do NOT try to show everything — go deep on this one facet.",
     "",
     "## Design Principles",
     "",
-    "1. SPATIAL SEMANTICS — use contrasting fill colors and bordered regions to represent physical or logical boundaries (e.g. on-chip vs off-chip, model vs context, query side vs key-value side).",
-    "2. NESTED CONTAINMENT — if a concept belongs to a larger structure, place it inside a larger bordered region with a different fill.",
-    "3. MULTIPLE ARROW STYLES — use different colors, dash patterns, and stroke widths to distinguish different data flows:",
+    "1. SPATIAL SEMANTICS — use contrasting fill colors and bordered regions to represent physical or logical boundaries.",
+    "2. NESTED CONTAINMENT — if a concept belongs to a larger structure, place it inside a larger bordered region.",
+    "3. MULTIPLE ARROW STYLES — use different colors, dash patterns, and stroke widths to distinguish data flows:",
     "   • solid bold arrow = primary data flow",
     "   • dashed arrow = secondary / cached / broadcast flow",
     "   • dotted thin arrow = information / control signal",
     "   • color: red tones for bottleneck/waste, green for optimized path, blue for information, amber for cache/memory",
-    "4. QUANTITATIVE ANNOTATIONS — include concrete numbers where the passage provides them (dimensions, bandwidths, latencies, cache sizes).",
-    "5. METRIC PANEL — add a summary box at the bottom-right or bottom showing key bottleneck metrics with computed values.",
-    "6. TEXT LABELS — place descriptive labels directly adjacent to the elements they annotate, not as legends. Use both English and Chinese where helpful.",
-    "7. GRADIENT AND DEPTH — use subtle linearGradient fills on background regions to suggest layering and hierarchy. Keep gradients subtle (low opacity).",
-    "8. TENSOR SHAPES — when showing tensors or matrices, draw them as nested or stacked rectangles with shape annotations like [B, T, H] or [seq_len, d_model].",
-    "9. CLEAN COMPOSITION — leave adequate spacing. The diagram should look like a published paper figure, not a dense dashboard.",
+    "4. QUANTITATIVE ANNOTATIONS — include concrete numbers where available.",
+    "5. TEXT LABELS — place descriptive labels directly adjacent to elements. Use both English and Chinese where helpful.",
+    "6. GRADIENT AND DEPTH — use subtle linearGradient fills on background regions to suggest layering.",
+    "7. TENSOR SHAPES — draw tensors/matrices as nested rectangles with shape annotations like [B, T, H].",
+    "8. CLEAN COMPOSITION — leave adequate spacing. The diagram should look like a published paper figure.",
     "",
     "## SVG Conventions",
     "",
-    "- Use viewBox to define your coordinate space (typical: 960x540 or 1200x700). The SVG will scale to fill its container.",
+    "- Use viewBox to define your coordinate space (typical: 960x540 or 1200x700).",
     "- Use <defs> for reusable gradients, markers (arrowheads), and filters.",
     "- Use <marker> for arrowheads with ids like 'arrowHead', 'arrowRed', 'arrowGreen'.",
     "- Use font-family='system-ui, sans-serif' for clean text rendering.",
     "- Keep total SVG under 80KB. Prefer clean geometry over excessive path data.",
-    "- Use Chinese for explanatory labels. Keep English for technical terms (token, KV cache, attention, softmax, HBM, SRAM, GPU, FP16, INT8, bandwidth, latency).",
-    "",
-    "## Style Reference — Hardware Architecture Diagram",
-    "",
-    "Here is the structure of a high-quality hardware principle diagram. Follow this style:",
-    "- A large bordered region in muted dark gray (#1a1e2e) labeled 'Off-chip (GPU HBM)' containing rectangular component blocks",
-    "- A smaller bordered region in green (#1b3a2a) labeled 'On-chip (per-token compute)' with a core compute block inside",
-    "- Multiple colored dashed arrows crossing the boundary between regions, each with a different meaning",
-    "- Small annotation boxes near the arrows explaining the data flow",
-    "- A bottom metrics panel showing 'Bottleneck & speed', 'GB/s', and computed 'speed = ... TPS'",
-    "- Subtle gradient fills on background regions to suggest depth",
-    "- Arrowhead markers for each color variant",
-    "",
-    "## Few-Shot Example 1: Memory-Bound Inference Diagram",
-    "",
-    "For a passage about LLM inference being memory-bound (reading entire model weights from HBM per token), generate:",
-    "",
-    `<svg viewBox="0 0 960 540" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">`,
-    `<defs>`,
-    `<marker id="ah-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/></marker>`,
-    `<marker id="ah-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/></marker>`,
-    `<marker id="ah-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/></marker>`,
-    `</defs>`,
-    `<!-- Off-chip region -->`,
-    `<rect x="30" y="30" width="900" height="300" rx="12" fill="#1a1e2e" stroke="#374151" stroke-width="2"/>`,
-    `<text x="50" y="60" fill="#9ca3af" font-size="13" font-weight="600">Off-chip (GPU HBM) · Weight Rows + Batch Cache</text>`,
-    `<!-- Weight storage blocks -->`,
-    `<rect x="60" y="90" width="360" height="80" rx="6" fill="#1e293b" stroke="#475569"/>`,
-    `<text x="240" y="135" text-anchor="middle" fill="#94a3b8" font-size="14" font-weight="600">Weight Rows [layers × d_model]</text>`,
-    `<!-- Batch cache -->`,
-    `<rect x="500" y="90" width="200" height="80" rx="6" fill="#1e293b" stroke="#475569"/>`,
-    `<text x="600" y="135" text-anchor="middle" fill="#94a3b8" font-size="14">Batch Cache [B × T × H]</text>`,
-    `<!-- On-chip region -->`,
-    `<rect x="180" y="350" width="400" height="150" rx="10" fill="#0f2e1f" stroke="#22c55e" stroke-width="2"/>`,
-    `<text x="200" y="380" fill="#86efac" font-size="13" font-weight="600">On-chip · per-token compute, requires ALL weights</text>`,
-    `<rect x="280" y="395" width="140" height="60" rx="6" fill="#166534" stroke="#4ade80"/>`,
-    `<text x="350" y="430" text-anchor="middle" fill="#bbf7d0" font-size="14" font-weight="600">Core Compute</text>`,
-    `<!-- Red dashed arrows: whole model read -->`,
-    `<path d="M240 170 C240 260, 300 300, 300 395" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-dasharray="8,4" marker-end="url(#ah-red)"/>`,
-    `<path d="M400 170 C400 250, 380 310, 380 395" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-dasharray="8,4" marker-end="url(#ah-red)"/>`,
-    `<text x="170" y="270" fill="#fca5a5" font-size="11" font-weight="600">Whole model read per token</text>`,
-    `<!-- Amber arrow: row-stream -->`,
-    `<path d="M420 170 C430 220, 410 280, 350 395" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="6,3" marker-end="url(#ah-amber)"/>`,
-    `<text x="440" y="240" fill="#fcd34d" font-size="11">Row-stream weight</text>`,
-    `<!-- Purple arrow: KV cache -->`,
-    `<path d="M700 170 C700 280, 500 340, 420 395" stroke="#a78bfa" stroke-width="2" fill="none" stroke-dasharray="6,3" marker-end="url(#ah-purple)"/>`,
-    `<text x="620" y="260" fill="#c4b5fd" font-size="11">Dist KV-store & on-chip batch-cache</text>`,
-    `<!-- Annotation -->`,
-    `<text x="80" y="250" fill="#f87171" font-size="13" font-weight="700">Bandwidth = real bottleneck</text>`,
-    `<text x="520" y="320" fill="#a78bfa" font-size="12">reuse across tokens</text>`,
-    `<!-- Bottom metrics -->`,
-    `<rect x="30" y="410" width="260" height="100" rx="8" fill="#111827" stroke="#374151"/>`,
-    `<text x="50" y="440" fill="#9ca3af" font-size="12" font-weight="600">Quantization</text>`,
-    `<text x="50" y="460" fill="#d1d5db" font-size="11">FP16 → INT8 saves bus payload</text>`,
-    `<text x="50" y="480" fill="#6b7280" font-size="10">OS pages · per-token compute</text>`,
-    `<rect x="620" y="410" width="310" height="100" rx="8" fill="#111827" stroke="#374151"/>`,
-    `<text x="640" y="440" fill="#9ca3af" font-size="12" font-weight="600">Bottleneck & speed</text>`,
-    `<text x="640" y="465" fill="#e5e7eb" font-size="12">GB/s = 248 GB/s</text>`,
-    `<text x="640" y="485" fill="#e5e7eb" font-size="12">speed = 10×10¹² / 248 = 40.3 TPS</text>`,
-    `</svg>`,
-    "",
-    "## Few-Shot Example 2: Transformer Layer with Multi-Head Attention",
-    "",
-    "For a passage about transformer self-attention, generate a diagram showing:",
-    "- Input embeddings flowing upward through the layer",
-    "- A large 'Multi-Head Attention' region with 4 small colored boxes inside (Head 1-4) showing Q/K/V projections",
-    "- Arrows showing Q, K, V entering from the bottom, attention scores computed between heads",
-    "- A separate FFN region above with two linear layers and ReLU",
-    "- Residual connection arrows that bypass the sub-layers",
-    "- Shape annotations at each stage: [B, T, d_model] → [B, T, h, d_k] → softmax → [B, T, d_model]",
-    "",
-    "## Now generate a diagram for this paper concept:",
+    "- Use Chinese for explanatory labels. Keep English for technical terms.",
     "",
     `Paper title: ${paper.title || "Untitled PDF"}`,
     `Selected page: ${activeContext.pageNumber || "unknown"}`,
@@ -1558,7 +1631,10 @@ const createFallbackHtmlDemo = (spec: VisualSpecBase): VisualHtmlDemo => {
   };
 };
 
-// HTML 轨道进入 iframe sandbox 前先规范化；真正的安全边界在 iframe sandbox + CSP。
+// B 模式 HTML 轨道进入 iframe sandbox 前先规范化：
+// 1. 模型没返回、返回不完整、缺少滑条/recalc/绘图面时，用本地 fallback；
+// 2. 命中明显危险 API 时，用本地 fallback；
+// 3. 真正的运行安全边界仍然是 HtmlSandbox 的 iframe sandbox + CSP。
 const normalizeHtmlDemo = (
   raw: unknown,
   fallbackSpec: VisualSpecBase,
@@ -1581,6 +1657,8 @@ const normalizeHtmlDemo = (
 };
 
 const htmlDemoNeedsFallback = (html: string, spec?: VisualSpecBase) => {
+  // 这些检查不是完整 HTML 安全沙箱，只是提前过滤明显不适合渲染的内容。
+  // 例如联网、越过 iframe、eval/import，或者没有交互控件/绘图区域的“空演示”。
   const hasUnsafeApi =
     /<script[^>]+src\s*=|fetch\s*\(|websocket|new\s+function|eval\s*\(|\bimport\s*(?:\(|[{*])|window\.top|window\.parent|location\.href|document\.cookie/i.test(
       html,
@@ -3561,13 +3639,29 @@ export function VisualLab({
   const [htmlGenerationError, setHtmlGenerationError] = useState<string | null>(
     null,
   );
-  const [generatedSvgDiagram, setGeneratedSvgDiagram] = useState<string | null>(
-    null,
-  );
-  const [svgGenerationStatus, setSvgGenerationStatus] = useState<
+  const [svgFacets, setSvgFacets] = useState<SvgFacet[]>([]);
+  const [activeFacetIndex, setActiveFacetIndex] = useState(0);
+  const generatedSvgDiagram = svgFacets[activeFacetIndex]?.svg ?? null;
+  const svgGenerationStatus = svgFacets.length === 0
+    ? "idle"
+    : svgFacets.some((f) => f.status === "loading")
+      ? "loading"
+      : svgFacets.some((f) => f.status === "done")
+        ? "done"
+        : svgFacets.every((f) => f.status === "error")
+          ? "error"
+          : "idle";
+  const svgGenerationError = svgFacets.length > 0 &&
+    svgFacets.every((f) => f.status === "error")
+    ? svgFacets.map((f) => f.error).filter(Boolean).join("; ")
+    : null;
+  const [generatedSvgExplanation, setGeneratedSvgExplanation] = useState<
+    string | null
+  >(null);
+  const [svgExplanationStatus, setSvgExplanationStatus] = useState<
     "idle" | "loading" | "done" | "error"
   >("idle");
-  const [svgGenerationError, setSvgGenerationError] = useState<string | null>(
+  const [svgExplanationError, setSvgExplanationError] = useState<string | null>(
     null,
   );
   const [generationStatus, setGenerationStatus] = useState<
@@ -3594,17 +3688,19 @@ export function VisualLab({
 
   useEffect(() => {
     setGeneratedSpec(null);
-    setGeneratedHtmlDemo(null);
+    // Preserve generated SVG and HTML so the diagram stays visible
+    // when the user switches PDF context.  Only clear status flags
+    // so the Generate button resets to idle.  The old content will be
+    // replaced once the user explicitly clicks Generate for the new
+    // context (spec.id change triggers the clear effect below).
     setHtmlGenerationStatus("idle");
     setHtmlGenerationError(null);
-    setGeneratedSvgDiagram(null);
-    setSvgGenerationStatus("idle");
-    setSvgGenerationError(null);
+    // Facets are preserved — svgGenerationStatus is derived from them.
     setGenerationStatus("idle");
     setGenerationError(null);
     setRevision((value) => value + 1);
     hasManualViewModeRef.current = false;
-    setViewMode("html");
+    // Do NOT reset viewMode — keep S mode if the user was viewing SVG.
   }, [activeContext?.id]);
 
   useEffect(() => {
@@ -3623,9 +3719,11 @@ export function VisualLab({
     setGeneratedHtmlDemo(null);
     setHtmlGenerationStatus("idle");
     setHtmlGenerationError(null);
-    setGeneratedSvgDiagram(null);
-    setSvgGenerationStatus("idle");
-    setSvgGenerationError(null);
+    setSvgFacets([]);
+    setActiveFacetIndex(0);
+    setGeneratedSvgExplanation(null);
+    setSvgExplanationStatus("idle");
+    setSvgExplanationError(null);
   }, [spec.id]);
 
   useEffect(() => {
@@ -3667,6 +3765,8 @@ export function VisualLab({
   };
 
   const generateHtmlDemo = async (targetSpec: VisualSpec) => {
+    // 生成 B 模式：把当前论文选区 + 全文摘录 + 结构化 VisualSpec
+    // 发给模型，让模型写一段自包含 HTML/SVG/JS 交互课件。
     if (!activeContext?.text.trim()) {
       setHtmlGenerationStatus("error");
       setHtmlGenerationError("Select a PDF paragraph before generating HTML.");
@@ -3716,6 +3816,8 @@ export function VisualLab({
         notes: "AI 直接生成的 sandbox HTML/SVG/JS 机制图。",
         html,
       };
+      // 模型写出的 HTML 必须先通过完整性/安全兜底检查；
+      // 检查不通过时 normalizeHtmlDemo 会直接替换成本地教学课件。
       const normalizedDemo = normalizeHtmlDemo(htmlDemo, targetSpec);
 
       log.info("VisualLab", "generateHtmlDemo done", {
@@ -3736,16 +3838,179 @@ export function VisualLab({
     }
   };
 
-  const generateSvgDiagram = async (targetSpec: VisualSpec) => {
+  const generateSvgFacets = async (targetSpec: VisualSpec): Promise<boolean> => {
     if (!activeContext?.text.trim()) {
-      setSvgGenerationStatus("error");
-      setSvgGenerationError("Select a PDF paragraph before generating.");
+      setSvgFacets([]);
+      return false;
+    }
+
+    log.info("VisualLab", "generateSvgFacets start", { title: targetSpec.title });
+
+    const paperContext = buildPaperContextExcerpt(
+      paperTextPages,
+      activeContext.pageNumber,
+    );
+
+    // Phase 1: Get facet definitions from AI
+    let facetDefs: Array<{ title: string; focus: string }>;
+    try {
+      const facetDefMessages: AiMessage[] = [
+        {
+          id: makeId(),
+          role: "user",
+          content: buildSvgFacetsPrompt({
+            activeContext,
+            paper,
+            paperContext,
+            spec: targetSpec,
+          }),
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      const facetDefResponse = await window.paperSuper?.sendAiMessage({
+        config: {
+          ...modelConfig,
+          maxTokens: Math.max(modelConfig.maxTokens, 8000),
+        },
+        paperTitle: paper.title,
+        contextItems: [
+          activeContext,
+          ...contextItems
+            .filter((item) => item.id !== activeContext.id)
+            .slice(0, 3),
+        ],
+        messages: facetDefMessages,
+      });
+      const rawDefs = parseModelJsonObject(facetDefResponse?.content || "[]");
+      facetDefs = Array.isArray(rawDefs)
+        ? rawDefs.filter(
+            (d: unknown) =>
+              d &&
+              typeof d === "object" &&
+              typeof (d as Record<string, unknown>).title === "string" &&
+              typeof (d as Record<string, unknown>).focus === "string",
+          )
+        : [];
+      if (facetDefs.length === 0) {
+        facetDefs = [
+          { title: "原理图", focus: "Complete principle diagram showing the overall concept" },
+        ];
+      }
+      log.info("VisualLab", "generateSvgFacets phase 1 done", {
+        facetCount: facetDefs.length,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Facet definition failed.";
+      log.warn("VisualLab", "generateSvgFacets phase 1 failed", {
+        error: message,
+      });
+      facetDefs = [
+        { title: "原理图", focus: "Complete principle diagram showing the overall concept" },
+      ];
+    }
+
+    // Initialize facets with pending status
+    const initialFacets: SvgFacet[] = facetDefs.map((d) => ({
+      title: d.title,
+      focus: d.focus,
+      svg: null,
+      status: "pending" as const,
+      error: null,
+    }));
+    setSvgFacets(initialFacets);
+    setActiveFacetIndex(0);
+
+    // Phase 2: Generate all SVGs in parallel, updating progressively
+    const results = await Promise.allSettled(
+      facetDefs.map(async (def, index) => {
+        // Mark this facet as loading
+        setSvgFacets((prev) =>
+          prev.map((f, i) => (i === index ? { ...f, status: "loading" as const } : f)),
+        );
+
+        try {
+          const messages: AiMessage[] = [
+            {
+              id: makeId(),
+              role: "user",
+              content: buildFacetSvgPrompt({
+                activeContext,
+                paper,
+                paperContext,
+                spec: targetSpec,
+                facetTitle: def.title,
+                facetFocus: def.focus,
+                facetIndex: index,
+                totalFacets: facetDefs.length,
+              }),
+              createdAt: new Date().toISOString(),
+            },
+          ];
+
+          const response = await window.paperSuper?.sendAiMessage({
+            config: {
+              ...modelConfig,
+              maxTokens: Math.max(modelConfig.maxTokens, 12000),
+            },
+            paperTitle: paper.title,
+            contextItems: [
+              activeContext,
+              ...contextItems
+                .filter((item) => item.id !== activeContext.id)
+                .slice(0, 3),
+            ],
+            messages,
+          });
+
+          const svg = extractSvgDiagram(response?.content || "");
+          if (!svg) {
+            throw new Error("AI 没有返回有效的 SVG 原理图。");
+          }
+
+          log.info("VisualLab", "generateSvgFacets facet done", {
+            index,
+            title: def.title,
+            svgLen: svg.length,
+          });
+          setSvgFacets((prev) =>
+            prev.map((f, i) =>
+              i === index ? { ...f, svg, status: "done" as const } : f,
+            ),
+          );
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "SVG generation failed.";
+          log.warn("VisualLab", "generateSvgFacets facet failed", {
+            index,
+            title: def.title,
+            error: message,
+          });
+          setSvgFacets((prev) =>
+            prev.map((f, i) =>
+              i === index ? { ...f, status: "error" as const, error: message } : f,
+            ),
+          );
+        }
+      }),
+    );
+
+    log.info("VisualLab", "generateSvgFacets all done");
+    return results.some((r) => r.status === "fulfilled");
+  };
+
+  const generateSvgExplanation = async (targetSpec: VisualSpec) => {
+    if (!activeContext?.text.trim()) {
+      setSvgExplanationStatus("error");
+      setSvgExplanationError("Select a PDF paragraph before generating.");
       return null;
     }
 
-    log.info("VisualLab", "generateSvgDiagram start", { title: targetSpec.title });
-    setSvgGenerationStatus("loading");
-    setSvgGenerationError(null);
+    log.info("VisualLab", "generateSvgExplanation start", {
+      title: targetSpec.title,
+    });
+    setSvgExplanationStatus("loading");
+    setSvgExplanationError(null);
 
     const paperContext = buildPaperContextExcerpt(
       paperTextPages,
@@ -3755,7 +4020,7 @@ export function VisualLab({
       {
         id: makeId(),
         role: "user",
-        content: buildVisualSvgPrompt({
+        content: buildSvgExplanationPrompt({
           activeContext,
           paper,
           paperContext,
@@ -3769,7 +4034,7 @@ export function VisualLab({
       const response = await window.paperSuper?.sendAiMessage({
         config: {
           ...modelConfig,
-          maxTokens: Math.max(modelConfig.maxTokens, 12000),
+          maxTokens: Math.max(modelConfig.maxTokens, 4000),
         },
         paperTitle: paper.title,
         contextItems: [
@@ -3780,22 +4045,29 @@ export function VisualLab({
         ],
         messages,
       });
-      const svg = extractSvgDiagram(response?.content || "");
-      if (!svg) {
-        throw new Error("AI 没有返回有效的 SVG 原理图。");
+
+      const explanation = (response?.content || "").trim();
+      if (!explanation) {
+        throw new Error("AI 没有返回原理图解释。");
       }
 
-      log.info("VisualLab", "generateSvgDiagram done", { svgLen: svg.length });
-      setGeneratedSvgDiagram(svg);
-      setSvgGenerationStatus("done");
-      return svg;
+      log.info("VisualLab", "generateSvgExplanation done", {
+        explanationLen: explanation.length,
+      });
+      setGeneratedSvgExplanation(explanation);
+      setSvgExplanationStatus("done");
+      return explanation;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "SVG generation failed.";
-      log.warn("VisualLab", "generateSvgDiagram failed", { error: message });
-      setGeneratedSvgDiagram(null);
-      setSvgGenerationStatus("error");
-      setSvgGenerationError(message);
+        error instanceof Error
+          ? error.message
+          : "SVG explanation generation failed.";
+      log.warn("VisualLab", "generateSvgExplanation failed", {
+        error: message,
+      });
+      setGeneratedSvgExplanation(null);
+      setSvgExplanationStatus("error");
+      setSvgExplanationError(message);
       return null;
     }
   };
@@ -3860,7 +4132,8 @@ export function VisualLab({
       });
       await Promise.allSettled([
         generateHtmlDemo(nextSpec),
-        generateSvgDiagram(nextSpec),
+        generateSvgFacets(nextSpec),
+        generateSvgExplanation(nextSpec),
       ]);
       setGenerationStatus("done");
       setIsPlaying(true);
@@ -3880,25 +4153,39 @@ export function VisualLab({
     }
   };
 
-  useEffect(() => {
-    if (!hideGenerate || !specOverride || !activeContext?.text.trim()) {
+  const generateVisualAssets = async () => {
+    // Workbench 嵌入态的手动入口：点击“生成可视化”后才会请求 S/B。
+    // 这避免了用户只是选中/切换 PDF 上下文时，VisualLab 自动连续消耗 AI。
+    if (!activeContext?.text.trim()) {
+      setHtmlGenerationStatus("error");
+      setHtmlGenerationError("请先在 PDF 中选择一段内容。");
       return;
     }
 
-    if (htmlGenerationStatus !== "idle" || generatedHtmlDemo) {
+    const [htmlResult, svgOk] = await Promise.all([
+      // B 模式：AI HTML/SVG/JS 动画课件。
+      generateHtmlDemo(spec),
+      // S 模式：多侧面 AI SVG 原理图。
+      generateSvgFacets(spec),
+      // D 模式：原理图文字解释。
+      generateSvgExplanation(spec),
+    ]);
+
+    if (svgOk && !hasManualViewModeRef.current) {
+      setViewMode("svg");
       return;
     }
 
-    void generateHtmlDemo(spec);
-    void generateSvgDiagram(spec);
-  }, [
-    activeContext?.id,
-    generatedHtmlDemo,
-    hideGenerate,
-    htmlGenerationStatus,
-    spec,
-    specOverride,
-  ]);
+    if (htmlResult && !hasManualViewModeRef.current) {
+      setViewMode("html");
+    }
+  };
+
+  const isVisualAssetLoading =
+    htmlGenerationStatus === "loading" ||
+    svgGenerationStatus === "loading" ||
+    svgExplanationStatus === "loading";
+  const hasGeneratedVisualAssets = Boolean(generatedHtmlDemo || generatedSvgDiagram);
 
   const statusLabel =
     generationStatus === "loading"
@@ -3907,19 +4194,35 @@ export function VisualLab({
         ? "正在生成高清原理图..."
       : htmlGenerationStatus === "loading"
         ? "正在生成 AI 可视化代码..."
+      : svgExplanationStatus === "loading"
+        ? "正在生成原理解释..."
+      : svgGenerationStatus === "error" &&
+          htmlGenerationStatus === "error" &&
+          !generatedHtmlDemo
+        ? "AI 原理图和动画生成失败，请检查模型配置后手动重试"
+      : svgGenerationStatus === "error"
+        ? `原理图生成失败：${svgGenerationError ?? "未知错误"}`
+      : htmlGenerationStatus === "error"
+        ? `${htmlGenerationError ?? "AI 可视化代码生成失败"}，B 模式已使用本地兜底`
+      : specOverride && hasGeneratedVisualAssets
+        ? "AI 可视化已加载"
       : specOverride
-        ? "已加载工作区图解"
+        ? "已加载本地预览，点击生成可视化后才会请求 AI"
+        : generationStatus === "done" &&
+            svgGenerationStatus === "done" &&
+            svgExplanationStatus === "done"
+          ? "AI 图解 + 原理图 + 解释已加载"
         : generationStatus === "done" && svgGenerationStatus === "done"
           ? "AI 图解 + 原理图已加载"
         : generationStatus === "done"
           ? "AI 图解已加载"
-          : htmlGenerationStatus === "error"
-            ? `${htmlGenerationError ?? "AI 可视化代码生成失败"}，已使用本地兜底`
           : generationStatus === "error"
             ? generationError
-            : activeContext
-              ? "可根据当前选区生成图解"
-              : "请先在 PDF 中选择一段内容";
+            : hasGeneratedVisualAssets
+              ? "已切换选区，图解仍为上一次生成结果"
+              : activeContext
+                ? "可根据当前选区生成图解"
+                : "请先在 PDF 中选择一段内容";
 
   return (
     <div className="visualLab">
@@ -3965,7 +4268,23 @@ export function VisualLab({
                 S
               </button>
             </div>
-            {!hideGenerate ? (
+            {hideGenerate ? (
+              <button
+                type="button"
+                className="ghostButton compactButton"
+                disabled={isVisualAssetLoading || !activeContext}
+                onClick={() => void generateVisualAssets()}
+              >
+                <Sparkles size={13} />
+                <span>
+                  {isVisualAssetLoading
+                    ? "Working"
+                    : hasGeneratedVisualAssets
+                      ? "重新生成"
+                      : "生成可视化"}
+                </span>
+              </button>
+            ) : (
               <button
                 type="button"
                 className="ghostButton compactButton"
@@ -3975,7 +4294,7 @@ export function VisualLab({
                 <Sparkles size={13} />
                 <span>{generationStatus === "loading" ? "Working" : "Generate"}</span>
               </button>
-            ) : null}
+            )}
           </div>
         </div>
 
@@ -4072,13 +4391,21 @@ export function VisualLab({
             </div>
           </>
         ) : viewMode === "svg" ? (
-          <SvgDiagramRenderer
-            svg={generatedSvgDiagram}
-            title={spec.title}
-            status={svgGenerationStatus}
-            error={svgGenerationError}
-          />
+          <>
+            <FacetSvgRenderer
+              facets={svgFacets}
+              activeIndex={activeFacetIndex}
+              onSelect={setActiveFacetIndex}
+            />
+            <SvgExplanationRenderer
+              explanation={generatedSvgExplanation}
+              status={svgExplanationStatus}
+              error={svgExplanationError}
+            />
+          </>
         ) : (
+          // B 模式显示入口：优先使用模型生成并通过 normalizeHtmlDemo 的 HTML；
+          // 其次兼容旧 VisualSpec.htmlDemo；最后使用本地 fallback 课件。
           <HtmlSandbox
             htmlDemo={
               generatedHtmlDemo ?? spec.htmlDemo ?? createFallbackHtmlDemo(spec)
@@ -4141,51 +4468,161 @@ export function VisualLab({
   );
 }
 
-function SvgDiagramRenderer({
-  svg,
-  title,
+function FacetSvgRenderer({
+  facets,
+  activeIndex,
+  onSelect,
+}: {
+  facets: SvgFacet[];
+  activeIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setZoom((prev) => Math.min(3, Math.max(0.3, prev - e.deltaY * 0.003)));
+  };
+
+  const handleDoubleClick = () => {
+    setZoom(1);
+  };
+
+  if (facets.length === 0) {
+    return (
+      <div className="visualSvgDiagram">
+        <div className="visualSvgPlaceholder">
+          点击生成可视化，手动请求 AI 生成高清原理图
+        </div>
+      </div>
+    );
+  }
+
+  const activeFacet = facets[activeIndex];
+
+  return (
+    <div className="facetSvgContainer">
+      <div className="facetTabs">
+        {facets.map((facet, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`facetTab ${i === activeIndex ? "active" : ""}`}
+            onClick={() => onSelect(i)}
+          >
+            {facet.status === "loading" && (
+              <Sparkles size={10} className="facetTabSpinner" />
+            )}
+            {facet.status === "error" && (
+              <span className="facetTabError">!</span>
+            )}
+            <span>{facet.title}</span>
+          </button>
+        ))}
+      </div>
+      <div
+        className={`visualSvgDiagram ${expanded ? "expanded" : ""}`}
+        onWheel={handleWheel}
+        onDoubleClick={handleDoubleClick}
+      >
+        {activeFacet?.svg && (
+          <div className="visualSvgToolbar">
+            <span className="visualSvgZoomLabel">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              title="重置缩放"
+            >
+              1:1
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              title={expanded ? "收起" : "展开全尺寸"}
+            >
+              {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+          </div>
+        )}
+        {activeFacet?.status === "loading" ? (
+          <div className="visualSvgLoading">
+            <Sparkles size={18} className="visualSvgLoadingIcon" />
+            <span>正在生成「{activeFacet.title}」...</span>
+          </div>
+        ) : activeFacet?.status === "error" ? (
+          <div className="visualSvgPlaceholder">
+            原理图生成失败：{activeFacet.error ?? "未知错误"}
+          </div>
+        ) : activeFacet?.svg ? (
+          <div
+            className="visualSvgZoomWrapper"
+            style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
+            dangerouslySetInnerHTML={{ __html: activeFacet.svg }}
+          />
+        ) : (
+          <div className="visualSvgPlaceholder">
+            等待生成...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SvgExplanationRenderer({
+  explanation,
   status,
   error,
 }: {
-  svg: string | null;
-  title: string;
+  explanation: string | null;
   status: "idle" | "loading" | "done" | "error";
   error: string | null;
 }) {
   if (status === "loading") {
     return (
-      <div className="visualSvgDiagram">
-        <div className="visualSvgLoading">
-          <Sparkles size={18} className="visualSvgLoadingIcon" />
-          <span>正在生成原理图...</span>
+      <div className="svgExplanationCard">
+        <div className="svgExplanationLoading">
+          <Sparkles size={14} className="visualSvgLoadingIcon" />
+          <span>正在生成原理图解释...</span>
         </div>
       </div>
     );
   }
 
-  if (!svg) {
+  if (status === "error") {
     return (
-      <div className="visualSvgDiagram">
-        <div className="visualSvgPlaceholder">
-          {status === "error"
-            ? `原理图生成失败：${error ?? "未知错误"}`
-            : "点击 Generate 生成高清原理图"}
+      <div className="svgExplanationCard">
+        <div className="svgExplanationError">
+          原理图解释生成失败：{error ?? "未知错误"}
         </div>
       </div>
     );
+  }
+
+  if (!explanation) {
+    return null;
   }
 
   return (
-    <div
-      className="visualSvgDiagram"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+    <div className="svgExplanationCard">
+      <div className="svgExplanationContent">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {explanation}
+        </ReactMarkdown>
+      </div>
+    </div>
   );
 }
 
 function HtmlSandbox({ htmlDemo }: { htmlDemo: VisualHtmlDemo }) {
   return (
     <div className="visualSandboxShell">
+      {/* AI 生成的 B 模式代码只在 iframe sandbox 中运行，不接触 React/Node/文件系统。 */}
       <iframe
         className="visualSandboxFrame"
         sandbox="allow-scripts"

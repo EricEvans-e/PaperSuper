@@ -25,20 +25,24 @@ Last updated: 2026-05-02
 - Left AI chat has compact narrow-width styling, auto-collapses when dragged below the threshold, and can reopen during the same drag when pulled back right.
 - Workspace widths and chat visibility are persisted in renderer `localStorage`.
 - Right AI Workbench with modular Visual, Formula, Experiment, and Insight panels generated from selected paper context.
-- Main AI Workbench generation requests structured `WorkspaceSpec` JSON only. It no longer embeds HTML/CSS/JS/SVG in JSON; VisualLab generates S-mode SVG and B-mode raw HTML through separate AI calls.
+- Main AI Workbench generation requests structured `WorkspaceSpec` JSON only. It no longer embeds HTML/CSS/JS/SVG in JSON; VisualLab generates S-mode SVG and B-mode raw HTML only when the user manually clicks `生成可视化` / standalone `Generate`.
 - Right AI Workbench content scrolls as a whole so taller modules are not clipped.
 - The AI activity panel keeps the header fixed in the right workbench, then lets `AiWorkbench` own the remaining-height vertical scroller; workspace blocks and Visual Lab content should not reintroduce fixed `height: 100%` clipping inside that scroll flow.
 - Visual module with S/B/A output: S mode is now the preferred generated view for sanitized SVG principle/structure diagrams, B mode is the sandboxed HTML/JS teaching lesson, and A mode remains the structured React/SVG fallback.
-- Visual Lab S mode asks AI for a single inline `<svg>` paper-style principle diagram, sanitizes it, and renders it directly. Generate switches to S mode after the full visual generation succeeds.
-- Visual Lab B mode uses safe and complete raw AI HTML from the second-stage code-generation call when available and otherwise generates a local self-contained teaching lesson from the structured `VisualSpec`.
+- Visual Lab S mode uses a two-phase multi-facet generation: Phase 1 asks AI for 3-4 facet definitions `[{title, focus}]`, Phase 2 generates each facet's SVG in parallel with progressive loading. Facets display as switchable tabs; first-to-return shows immediately.
+- S mode SVG supports Ctrl+wheel zoom (0.3x–3x), double-click reset, and an expand/collapse toolbar with zoom percentage display.
+- `extractJsonCandidate` in `utils.ts` now supports both `{...}` objects and `[...]` arrays, fixing Phase 1 facet definition parsing.
+- Phase 1 facet definition `maxTokens` increased to 8000 to prevent truncated JSON responses.
+- Visual Lab B mode uses safe and complete raw AI HTML from the manual code-generation call when available and otherwise generates a local self-contained teaching lesson from the structured `VisualSpec`.
 - Visual Lab B mode now rejects incomplete AI demos without sliders, `recalc()`, or a drawing surface; KV interleaving/consolidation demos must include K/V/interleaving structure or fall back to the dedicated local template.
 - KV interleaving/consolidation fallback now shows separated K cache / V cache rows, animated K_i + V_i pairing, an interleaved `[K_i|V_i]` output row, token/group/speed sliders, and live I/O reduction metrics.
 - Visual Lab B fallback lessons include a principle canvas, dynamic mechanism view, parameter controls, live metrics, clickable/autoplay steps, and takeaway strip.
 - Visual Lab A mode now uses a local parameter-driven simulation engine, so slider changes recompute and redraw teaching visuals such as K/V cache blocks, token interleaving, transfer blocks, GPU lanes, metric cards, and flow speed.
 - Visual Lab A mode also supports declarative `visualElements`, allowing generated scenes to render richer non-flowchart diagrams such as architecture blocks, matrices, layer stacks, formulas, bars, brackets, axes, annotations, and arrows.
-- Visual Lab standalone generation now asks for structured `VisualSpec` data first, then runs separate generation for a sanitized inline SVG principle diagram and a teaching-oriented self-contained HTML/JS demo with visible controls and a recomputation loop.
+- Visual Lab no longer auto-generates S/B AI assets when `specOverride` or selected context changes. It shows local preview first; manual visual generation then requests a sanitized inline SVG principle diagram and a teaching-oriented self-contained HTML/JS demo with visible controls and a recomputation loop.
 - VisualLab and AiWorkbench parse model JSON through `parseModelJsonObject`, which extracts fenced JSON, removes trailing commas, repairs common missing-comma boundaries, and reports clearer parse hints.
 - `parseModelJsonObject` now handles a common model error where an array of objects ends with a value such as `"unit": "GB/s" }` and then starts the next property without the missing `],`.
+- Added `SvgFacet` interface to `types.ts` for multi-facet SVG state management.
 - Added renderer/main logging: `window.paperSuper.log` forwards renderer logs to `paperSuper:log`, and Electron main writes daily logs under `userData/logs/`.
 - API configuration stored in renderer `localStorage`.
 - Real AI provider support:
@@ -76,4 +80,4 @@ Last updated: 2026-05-02
 
 ## Verification Snapshot
 
-`npm run build` passed on 2026-05-02 after the S-mode SVG principle diagram, logging bridge, and documentation sync.
+`npm run build` passed on 2026-05-02 after the multi-facet SVG generation, Ctrl+wheel zoom, array JSON extraction fix, and documentation sync.

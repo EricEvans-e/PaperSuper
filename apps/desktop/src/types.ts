@@ -364,6 +364,16 @@ export interface VisualSpec {
   htmlDemo?: VisualHtmlDemo;
   /** AI-generated inline SVG diagram for high-fidelity principle illustration. */
   svgDiagram?: string;
+  /** AI-generated text explanation for the SVG diagram and the underlying principle. */
+  svgExplanation?: string;
+}
+
+export interface SvgFacet {
+  title: string;
+  focus: string;
+  svg: string | null;
+  status: "pending" | "loading" | "done" | "error";
+  error: string | null;
 }
 
 export type WorkspaceModuleType = "visual" | "formula" | "experiment" | "insight";

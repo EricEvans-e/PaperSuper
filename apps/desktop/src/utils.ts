@@ -15,7 +15,18 @@ export const formatTime = (iso: string) =>
 const extractJsonCandidate = (text: string) => {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fenced?.[1] ?? text;
-  const start = candidate.indexOf("{");
+  const firstBrace = candidate.indexOf("{");
+  const firstBracket = candidate.indexOf("[");
+
+  // Array-first: if [ appears before {, extract the array
+  if (firstBracket >= 0 && (firstBrace < 0 || firstBracket < firstBrace)) {
+    const end = candidate.lastIndexOf("]");
+    if (end > firstBracket) {
+      return candidate.slice(firstBracket, end + 1);
+    }
+  }
+
+  const start = firstBrace;
   const end = candidate.lastIndexOf("}");
 
   if (start < 0 || end <= start) {
