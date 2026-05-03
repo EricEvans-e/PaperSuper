@@ -1,6 +1,6 @@
 # PaperSuper Handoff
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 ## Completed
 
@@ -56,6 +56,12 @@ Last updated: 2026-05-02
 - PDF reader zoom with `Ctrl/Cmd + mouse wheel` inside the paper pane, separate from global UI zoom.
 - Highlight layers are refreshed after PDF scale/page/text-layer render events so AI context highlights stay aligned during PDF zoom.
 - PDF page text is extracted in the renderer for contextual highlight translation.
+- Translation popup is now draggable by its header; regenerate and close buttons remain fully functional during drag.
+- Right-clicking a highlight while the translation popup is open closes the popup, allowing the next right-click to open a new translation menu.
+- Right-clicking while the highlight action menu is open passes the event through to the highlight underneath via CSS `pointer-events: none` on the menu container, so the translation menu immediately reappears on the new highlight.
+- Selection debounce reduced from 500ms to 200ms so highlight overlays appear faster after text selection.
+- Native `::selection` color now matches the highlight overlay color (`#FFE28F`), eliminating the visible color flash during selection.
+- First page highlight layer no longer sits behind text spans: CSS `z-index: 3 !important` beats the PDF.js specificity override, and `onTextLayerRendered` re-appends the highlight layer to ensure correct DOM order regardless of rendering race conditions.
 
 ## Known Gaps
 
@@ -80,4 +86,4 @@ Last updated: 2026-05-02
 
 ## Verification Snapshot
 
-`npm run build` passed on 2026-05-02 after the multi-facet SVG generation, Ctrl+wheel zoom, array JSON extraction fix, and documentation sync.
+`npm run build` passed on 2026-05-03 after translation popup drag, right-click pass-through, selection debounce/color fixes, first-page z-index fix, and documentation sync.

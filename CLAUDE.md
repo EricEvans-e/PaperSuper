@@ -46,7 +46,7 @@ Renderer (React)  →  window.paperSuper (preload bridge, 6 methods)  →  Elect
 | `apps/desktop/src/App.tsx` | Root component. Owns all top-level state, three-zone grid layout, split-handle resizing, localStorage persistence |
 | `apps/desktop/src/components/AiWorkbench.tsx` | Generates `WorkspaceSpec` JSON from AI, renders page-style workspace with Overview/Visual/Formula/Experiment/Insight blocks |
 | `apps/desktop/src/components/VisualLab.tsx` | Largest file (~6K lines). Visual module with S/B/A modes. S mode: multi-facet AI SVG principle diagrams with tab switching, Ctrl+wheel zoom, and progressive loading. B mode: sandboxed iframe HTML/JS via separate AI code generation. A mode: structured React/SVG with mechanism scenes and simulations |
-| `apps/desktop/src/components/PdfReaderPane.tsx` | PDF viewer with text/sentence click-to-context, Alt-drag region extraction, highlight translation, PDF-only zoom |
+| `apps/desktop/src/components/PdfReaderPane.tsx` | PDF viewer with text/sentence click-to-context, Alt-drag region extraction, draggable highlight translation popup, PDF-only zoom |
 | `apps/desktop/src/utils.ts` | `parseModelJsonObject()` — defensive JSON parser handling fenced code blocks, trailing commas, missing commas, and JSON arrays (not just objects) with stack-based repair |
 | `apps/desktop/src/log.ts` | Renderer logging helper that prints to DevTools and forwards to `window.paperSuper.log` |
 | `apps/desktop/src/visualSimulation.ts` | Local parameter-driven simulation engine for A-mode Visual Lab |
@@ -101,6 +101,10 @@ These are the critical rules to follow when modifying code:
 - Alt-dragged regions extract text-layer spans and convert to text rects — no rectangular area highlights, no screenshots to AI.
 - Clicking an existing AI Context highlight removes that single item. Clicking blank space clears all.
 - Translation (right-click AI Context highlight) dynamically merges same-page, same-column, visually adjacent highlights using line-level rects, not just bounding boxes.
+- Translation popup is draggable by its header; regenerate/close buttons stop mouse propagation to remain functional during drag.
+- Right-clicking while the translation popup is open closes it without stopping propagation, so the next right-click reaches the highlight. The highlight action menu uses `pointer-events: none` on the container and `pointer-events: auto` on the button so right-clicks pass through to the highlight underneath.
+- Highlight layer z-index uses `!important` in `PdfHighlighter.module.css` to beat the PDF.js specificity override. `onTextLayerRendered` re-appends the highlight layer to fix first-page DOM order race.
+- Selection debounce is 200ms; native `::selection` color matches the highlight overlay color `#FFE28F`.
 
 ### Vendored dependency
 

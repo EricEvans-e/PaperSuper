@@ -75,6 +75,11 @@ The helper `scripts/run-electron-vite.cjs` clears `ELECTRON_RUN_AS_NODE`; keep u
 - Translation dynamically merges same-page, same-column, visually adjacent `AI Context` text highlights around the right-clicked highlight; this affects only the translation source and does not mutate highlights.
 - Translation merge adjacency uses each highlight's line-level rects rather than only its outer bounding box, so small whitespace gaps, wrapped lines, and slight PDF text-layer offsets should still merge.
 - Translation reuses `window.paperSuper.sendAiMessage` with the current `ModelConfig`, selected highlight text, existing selected context, and background-extracted PDF page text.
+- Translation popup is draggable by its header; regenerate and close buttons stop mouse propagation so they remain functional during drag.
+- The highlight action menu uses CSS `pointer-events: none` on the container and `pointer-events: auto` on the translate button so right-clicks pass through to the highlight underneath.
+- Right-clicking while the translation popup is open closes it without `stopPropagation`, so the next right-click reaches the highlight and opens a new menu.
+- The highlight layer z-index uses `!important` to beat the PDF.js specificity override; `onTextLayerRendered` re-appends the highlight layer div to fix first-page DOM order.
+- Selection debounce is 200ms; native `::selection` color matches the highlight overlay color `#FFE28F`.
 - Clicking an existing `AI Context` highlight removes that single context item.
 - Clicking any blank space in the PDF viewer clears all `AI Context` highlights and linked context items.
 

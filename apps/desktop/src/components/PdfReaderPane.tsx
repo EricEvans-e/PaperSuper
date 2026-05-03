@@ -690,6 +690,8 @@ const buildTranslationPaperContext = (
   paperTextPages: PaperTextPage[],
   pageNumber?: number,
 ) => {
+  // 翻译不会只把当前高亮文本发给 AI。
+  // 它会先使用整篇 PDF 提取出的 paperTextPages，优先挑当前页、前几页，再在长度上限内拼成论文上下文摘录。
   if (paperTextPages.length === 0) {
     return "No extracted full-paper text is available yet.";
   }
@@ -769,6 +771,8 @@ function PdfTextExtractor({
     let cancelled = false;
 
     const extract = async () => {
+      // 这里会遍历整份 PDF，把每一页可提取到的文字都收集出来，
+      // 最终形成 [{ pageNumber, text }] 这样的整篇论文文本缓存。
       const pages: PaperTextPage[] = [];
 
       for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
@@ -832,6 +836,47 @@ export function PdfReaderPane({
   const [pdfScale, setPdfScale] = useState<number | "auto">("auto");
   const [translationPopup, setTranslationPopup] =
     useState<TranslationPopupState | null>(null);
+  const [translationDragOffset, setTranslationDragOffset] = useState<{
+    x: number;
+    y: number;
+  }>({ x: 0, y: 0 });
+
+  const handleTranslationDragStart = useCallback(
+    (event: React.MouseEvent) => {
+      if (event.button !== 0) return;
+      if (!translationPopup) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const anchorX = translationPopup.anchor.x;
+      const anchorY = translationPopup.anchor.y;
+
+      const handleMouseMove = (e: MouseEvent) => {
+        setTranslationDragOffset({
+          x: e.clientX - startX,
+          y: e.clientY - startY,
+        });
+      };
+
+      const handleMouseUp = (e: MouseEvent) => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        setTranslationDragOffset({ x: 0, y: 0 });
+        setTranslationPopup((prev) =>
+          prev
+            ? { ...prev, anchor: { x: anchorX + dx, y: anchorY + dy } }
+            : prev,
+        );
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [translationPopup],
+  );
 
   const getHighlightById = useCallback(
     (id: string) => highlights.find((highlight) => highlight.id === id),
@@ -969,6 +1014,8 @@ export function PdfReaderPane({
       paperTextPages,
       menu.pageNumber,
     );
+    // 注意：真正发给 AI 的不只是 sourceText。
+    // prompt 里还会带上 paperContext，让翻译参考整篇论文的术语和上下文。
     const prompt = buildTranslationPrompt({
       paperTitle: paper.title,
       sourceText: menu.sourceText,
@@ -1117,21 +1164,19 @@ export function PdfReaderPane({
       >
         {highlightActionMenu ? (
           <div
-            className="highlightActionMenu"
+            className="highlightActionMenu highlightActionMenuPassThrough"
             style={{
               left: highlightActionMenu.anchor.x,
               top: highlightActionMenu.anchor.y,
-            }}
-            onClick={(event) => event.stopPropagation()}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
             }}
           >
             <button
               type="button"
               className="highlightActionButton"
-              onClick={() => void startTranslation(highlightActionMenu)}
+              onClick={(event) => {
+                event.stopPropagation();
+                void startTranslation(highlightActionMenu);
+              }}
             >
               <Languages size={14} />
               <span>翻译</span>
@@ -1141,19 +1186,22 @@ export function PdfReaderPane({
 
         {translationPopup ? (
           <div
-            className="translationPopup"
+            className={`translationPopup${translationDragOffset.x !== 0 || translationDragOffset.y !== 0 ? " dragging" : ""}`}
             style={{
-              left: translationPopup.anchor.x,
-              top: translationPopup.anchor.y,
-              maxHeight: `min(520px, calc(100% - ${translationPopup.anchor.y + 8}px))`,
+              left: translationPopup.anchor.x + translationDragOffset.x,
+              top: translationPopup.anchor.y + translationDragOffset.y,
+              maxHeight: `min(520px, calc(100% - ${translationPopup.anchor.y + translationDragOffset.y + 8}px))`,
             }}
             onClick={(event) => event.stopPropagation()}
             onContextMenu={(event) => {
               event.preventDefault();
-              event.stopPropagation();
+              setTranslationPopup(null);
             }}
           >
-            <div className="translationPopupHeader">
+            <div
+              className="translationPopupHeader"
+              onMouseDown={handleTranslationDragStart}
+            >
               <div className="translationPopupTitle">
                 {translationPopup.status === "loading" ? (
                   <LoaderCircle size={14} className="spinIcon" />
@@ -1168,6 +1216,7 @@ export function PdfReaderPane({
                   className="textIconButton"
                   aria-label="Regenerate translation"
                   disabled={translationPopup.status === "loading"}
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={() =>
                     void startTranslation({
                       anchor: translationPopup.anchor,
@@ -1184,6 +1233,7 @@ export function PdfReaderPane({
                   type="button"
                   className="textIconButton"
                   aria-label="Close translation"
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={() => setTranslationPopup(null)}
                 >
                   <X size={14} />

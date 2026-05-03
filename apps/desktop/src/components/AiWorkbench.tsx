@@ -116,6 +116,8 @@ const buildPaperContextExcerpt = (
   paperTextPages: PaperTextPage[],
   pageNumber?: number,
 ) => {
+  // AI Workbench 生成时也会复用整篇论文文本缓存。
+  // 这里不是把全文原样发送，而是优先当前页、邻近页和开头几页，再裁成一个较短 excerpt。
   if (paperTextPages.length === 0) {
     return "No extracted paper text is available yet.";
   }
@@ -595,6 +597,8 @@ export function AiWorkbench({
       {
         id: makeId(),
         role: "user",
+        // 这一步会把“当前选区 + 论文上下文摘录”一起写进 prompt，
+        // 所以工作区生成并不是只基于一小段孤立文本。
         content: buildWorkspacePrompt({
           activeContext,
           paper,

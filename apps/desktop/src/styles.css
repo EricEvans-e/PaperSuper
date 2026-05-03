@@ -2863,6 +2863,14 @@ select.textInput {
   border-radius: 6px;
 }
 
+.highlightActionMenuPassThrough {
+  pointer-events: none;
+}
+
+.highlightActionMenuPassThrough .highlightActionButton {
+  pointer-events: auto;
+}
+
 .highlightActionButton {
   display: flex;
   align-items: center;
@@ -2898,6 +2906,12 @@ select.textInput {
   padding: 0 8px 0 10px;
   border-bottom: 1px solid #2a2d34;
   background: #1d1e23;
+  cursor: grab;
+  user-select: none;
+}
+
+.translationPopup.dragging .translationPopupHeader {
+  cursor: grabbing;
 }
 
 .translationPopupTitle,

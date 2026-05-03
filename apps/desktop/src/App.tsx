@@ -15,6 +15,8 @@ import type {
 } from "./types";
 import { makeId } from "./utils";
 
+// ===== 顶层配置常量 =====
+// 这一段定义应用启动时会用到的默认值和布局边界。
 const SAMPLE_PDF_URL = "https://arxiv.org/pdf/1708.08021";
 const STORAGE_MODEL_CONFIG = "papersuper:model-config";
 const STORAGE_WORKSPACE_LAYOUT = "papersuper:workspace-layout";
@@ -22,7 +24,7 @@ const STORAGE_WORKSPACE_LAYOUT = "papersuper:workspace-layout";
 const DEFAULT_CHAT_WIDTH = 340;
 const DEFAULT_RIGHT_WIDTH = 340;
 const MIN_CHAT_WIDTH = 180;
-const CHAT_AUTO_COLLAPSE_WIDTH = 150;
+const CHAT_AUTO_COLLAPSE_WIDTH = 120;
 const CHAT_REOPEN_WIDTH = MIN_CHAT_WIDTH;
 const MAX_CHAT_WIDTH = 820;
 const MIN_PDF_WIDTH = 320;
@@ -30,20 +32,26 @@ const MIN_RIGHT_WIDTH = 220;
 const MAX_RIGHT_WIDTH = 820;
 const SPLIT_HANDLE_WIDTH = 6;
 
+// ===== 结构化本地存储数据 =====
+// workspace 布局会整体持久化到 localStorage，所以先定义一份清晰的结构。
 interface WorkspaceLayout {
   isChatOpen: boolean;
   chatWidth: number;
   rightWidth: number;
 }
 
+// ===== 默认模型配置 =====
+// 首次打开应用、或 localStorage 里没有可用配置时，使用这份默认值。
 const defaultModelConfig: ModelConfig = {
   provider: "openai-chat",
   apiBase: "https://api.openai.com/v1",
   apiKey: "",
   model: "gpt-4o-mini",
-  maxTokens: 1200,
+  maxTokens: 8400,
 };
 
+// ===== 初始化辅助函数 =====
+// 这些函数在真正进入组件之前，负责把“默认值 / 本地存储 / 示例数据”整理成可用状态。
 const readStoredModelConfig = (): ModelConfig => {
   try {
     const raw = localStorage.getItem(STORAGE_MODEL_CONFIG);
@@ -101,13 +109,19 @@ const readStoredWorkspaceLayout = (): WorkspaceLayout => {
   }
 };
 
+// ===== App 组件主体 =====
+// 这一部分开始进入 React 组件：状态、effect、事件处理和最终渲染都在这里。
 export function App() {
+  // ===== 状态初始化 =====
+  // 这里集中声明整个 renderer 顶层最核心的状态。
   const storedLayout = useMemo(() => readStoredWorkspaceLayout(), []);
   const [activity, setActivity] = useState<ActivityId>("ai");
   const [paper, setPaper] = useState<PaperDocument>(() => createSamplePaper());
   const [pdfUrl, setPdfUrl] = useState(SAMPLE_PDF_URL);
   const [highlights, setHighlights] = useState<IHighlight[]>([]);
   const [contextItems, setContextItems] = useState<AiContextItem[]>([]);
+  // 这里保存“整篇论文按页提取后的文本”。
+  // 后面翻译、AI Workbench、VisualLab 生成时，不只看当前选区，也会从这里裁剪一段论文级上下文送给 AI。
   const [paperTextPages, setPaperTextPages] = useState<PaperTextPage[]>([]);
   const [messages, setMessages] = useState<AiMessage[]>(() => [
     {
@@ -129,6 +143,8 @@ export function App() {
   const workspaceRef = useRef<HTMLElement>(null);
   const objectUrlRef = useRef<string | null>(null);
 
+  // ===== 副作用：持久化与全局监听 =====
+  // 这一组 useEffect 负责把状态同步到 localStorage，并注册/清理全局事件。
   useEffect(() => {
     localStorage.setItem(STORAGE_MODEL_CONFIG, JSON.stringify(modelConfig));
   }, [modelConfig]);
@@ -193,6 +209,8 @@ export function App() {
     };
   }, []);
 
+  // ===== 事件处理与状态变更函数 =====
+  // 这一组函数是 App 的“动作层”：打开 PDF、增删上下文、清空高亮、拖拽布局等。
   const openPdfFile = async () => {
     setOpenError(null);
 
@@ -367,6 +385,8 @@ export function App() {
     [chatWidth, isChatOpen, rightWidth],
   );
 
+  // ===== 渲染结构 =====
+  // App 本身不做复杂展示细节，它主要负责把状态和回调分发给各个子组件。
   return (
     <div className="appShell">
       <ActivityBar

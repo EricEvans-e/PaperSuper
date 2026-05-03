@@ -245,6 +245,8 @@ const buildPaperContextExcerpt = (
   paperTextPages: PaperTextPage[],
   pageNumber?: number,
 ) => {
+  // 原理图 / 可视化生成也会复用整篇论文文本缓存。
+  // 这里不会把全文原样发送，而是优先当前页和邻近页，再拼接少量前文，裁成一个较短 excerpt。
   if (paperTextPages.length === 0) {
     return "No extracted paper text is available yet.";
   }
@@ -4097,6 +4099,8 @@ export function VisualLab({
         activeContext.pageNumber,
       ),
     });
+    // 这里先把“当前选区 + 论文上下文摘录”整理进 prompt，
+    // 所以原理图生成并不是只基于一小段孤立文本。
     const messages: AiMessage[] = [
       {
         id: makeId(),

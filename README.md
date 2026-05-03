@@ -17,6 +17,8 @@ PaperSuper is an Electron + React + TypeScript prototype for a PDF-first AI rese
 - Right-clicking an AI context highlight opens a translation action; adjacent same-page highlights are merged for translation and shown in a floating Markdown panel near the PDF.
 - Translation merging uses line-level highlight geometry, so small gaps, wrapped lines, and slight PDF text-layer offsets can still be treated as one selected passage.
 - Highlight translation uses the configured AI provider and includes extracted paper text context for terminology consistency.
+- Translation popup is draggable by its header for manual repositioning.
+- Right-clicking while the translation popup or action menu is open passes the event through to the highlight underneath, so the translation menu immediately reappears on a different highlight.
 - Clicking any blank space inside the PDF viewer clears all auto-saved AI context highlights.
 - AI configuration stored in renderer `localStorage`.
 - Supported AI provider formats:

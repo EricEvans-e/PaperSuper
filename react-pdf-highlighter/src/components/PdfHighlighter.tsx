@@ -510,6 +510,17 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
   };
 
   onTextLayerRendered = () => {
+    // Re-append highlight layers after text spans to ensure correct DOM order
+    const pagesCount = this.viewer.pagesCount;
+    for (let i = 0; i < pagesCount; i++) {
+      const { textLayer } = this.viewer.getPageView(i) || {};
+      if (textLayer?.div) {
+        const layer = textLayer.div.querySelector(".PdfHighlighter__highlight-layer");
+        if (layer) {
+          textLayer.div.appendChild(layer);
+        }
+      }
+    }
     this.queueRenderHighlightLayers();
   };
 
@@ -683,7 +694,7 @@ export class PdfHighlighter<T_HT extends IHighlight> extends PureComponent<
     );
   };
 
-  debouncedAfterSelection: () => void = debounce(this.afterSelection, 500);
+  debouncedAfterSelection: () => void = debounce(this.afterSelection, 200);
 
   toggleTextSelection(flag: boolean) {
     if (!this.viewer.viewer) {

@@ -25,7 +25,7 @@ html
 }
 
 .textLayer ::selection {
-  background: rgba(252, 232, 151, 1);
+  background: rgba(255, 226, 143, 1);
   mix-blend-mode: multiply;
 }
 

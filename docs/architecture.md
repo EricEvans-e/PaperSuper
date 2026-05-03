@@ -1,6 +1,6 @@
 # PaperSuper Architecture
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 ## Overview
 
@@ -112,7 +112,10 @@ Renderer React UI
 5. When translation starts, `PdfReaderPane` builds a focused translation prompt from the merged highlight text, current paper title, existing selected context, and background-extracted PDF page text.
 6. Renderer calls `window.paperSuper.sendAiMessage` with the current `ModelConfig`; no chat history is appended.
 7. The result renders as Markdown in a floating panel near the PDF highlight with close and regenerate controls.
-8. Translation is non-streaming in the current version; the existing streaming path remains reserved for the left AI chat.
+8. The translation popup is draggable by its header; regenerate and close buttons stop pointer propagation so they remain functional during drag.
+9. Right-clicking while the translation popup is open closes it without stopping event propagation, so the next right-click reaches the highlight underneath and opens a new translation menu.
+10. The highlight action menu uses CSS `pointer-events: none` on the container and `pointer-events: auto` on the translate button, so right-clicking the menu area passes through to the highlight and the menu reappears immediately.
+11. Translation is non-streaming in the current version; the existing streaming path remains reserved for the left AI chat.
 
 ### Streaming AI Chat
 
@@ -185,6 +188,14 @@ Renderer React UI
 6. `PdfHighlighter` reapplies `viewer.currentScaleValue` when `pdfScaleValue` changes so PDF.js rerenders the pages.
 7. `PdfHighlighter` queues highlight-layer refreshes on `pdfScaleValue` changes plus PDF.js `scalechanging`, `pagerendered`, and `textlayerrendered` events, keeping existing highlights aligned after scaling.
 8. The PDF zoom label is displayed in the PDF pane header and is not persisted yet.
+
+### PDF Highlight Layer Rendering
+
+1. `PdfHighlighter` renders highlight overlays as children of each page's `textLayer.div`, positioned via `findOrCreateContainerLayer`.
+2. The highlight layer uses `z-index: 3 !important` to beat the PDF.js rule `.textLayer > :not(.markedContent) { z-index: 1 }` which has higher specificity (0,2,0) than a single-class selector.
+3. `onTextLayerRendered` re-appends the highlight layer div after text spans to fix a DOM order race condition on the first page, where the RAF from `pagerendered` can execute before text stream processing completes.
+4. Native `::selection` color is set to `rgba(255, 226, 143, 1)` to match the highlight overlay color, eliminating a visible color flash during selection.
+5. Selection debounce is 200ms (reduced from 500ms), so highlight overlays appear faster after text selection.
 
 ## Provider Support
 

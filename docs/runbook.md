@@ -1,6 +1,6 @@
 # PaperSuper Runbook
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 ## Commands
 
@@ -40,35 +40,38 @@ npm run preview
 6. Add several context highlights, click blank PDF space, and confirm all AI context highlights are cleared.
 7. Select text or Alt-drag a text region and verify it is auto-highlighted as text, counted as text AI context, and does not leave a rectangular area box.
 8. Create several adjacent AI context highlights, including a wrapped line or a small visual gap, right-click one of them, choose `翻译`, and confirm the floating Markdown translation panel includes the adjacent highlighted sentences.
-9. Open a local PDF with the title-bar Open PDF button.
-10. Switch between Paper, AI, and Settings activities.
-11. Toggle the left AI chat from the activity bar and confirm the PDF pane expands/collapses cleanly.
-12. Drag the left split handle to a narrow width and confirm the chat becomes compact, auto-collapses below the threshold, and reopens if the still-held pointer is dragged back right.
-13. Drag both vertical split handles and confirm the left chat, center PDF, and right workbench widths adjust without overlap.
-14. Refresh/restart and confirm the adjusted workspace widths are retained.
-15. Press `Ctrl/Cmd + +` or `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, and `Ctrl/Cmd + 0`; confirm the whole app zooms and reset works.
-16. Hold `Ctrl/Cmd` and scroll the mouse wheel inside the PDF pane; confirm only the PDF view zooms, the header percentage updates, and existing highlights stay aligned with the selected text or region.
-17. Restart the app and confirm the last non-reset global zoom factor is retained.
-18. Configure one AI provider and send a short prompt from the left AI chat.
-19. Open the AI activity in the right workbench and confirm the AI Workbench renders a preview workspace.
-20. Confirm the right workbench has a visible scrollbar when content exceeds the available height.
-21. Use the compact block navigator and confirm it scrolls to Overview, Visual, Formula, Experiment, and Insight blocks.
-22. Confirm selecting PDF text only updates highlights/local preview and does not automatically send VisualLab S/B generation requests.
-23. In the right AI Workbench, click `Generate` and confirm it requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
-24. In the Visual module, click `生成可视化` and confirm S mode becomes active when generation completes.
-25. In S mode, confirm multiple facet tabs appear (3-4 tabs with Chinese titles like "整体架构", "数据流"). Click each tab and confirm each shows a different focused SVG diagram.
-26. In S mode, hold `Ctrl` and scroll the mouse wheel over the SVG area; confirm the diagram zooms in/out (0.3x–3x range). Double-click the SVG to reset to 100%. Confirm the toolbar shows the current zoom percentage and a 1:1 reset button.
-27. Switch to B mode, move the sliders, and confirm the principle canvas, animation/highlighted blocks, live metrics, and step explanation update without leaving the sandbox.
-28. Switch to A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
-29. In Visual A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
-30. In the Formula module, confirm expression, variables, and derivation steps fit and scroll if needed.
-31. In the Experiment module, move sliders and confirm metrics plus the teaching curve update locally.
-32. In the Insight module, confirm key points, assumptions, limitations, and next questions are visible.
-33. Click an Overview suggested action and confirm the page scrolls to the target block.
-34. Ask the AI chat to translate or explain the selected context.
-35. Confirm streaming output appears as Markdown.
-36. Check DevTools and the Electron `userData/logs/papersuper-YYYY-MM-DD.log` file for renderer/main log lines when diagnosing generation failures.
-37. Run `npm run build`.
+9. Drag the translation popup by its header and confirm it moves; click regenerate and close buttons and confirm they work during drag.
+10. Right-click a highlight to open the translation menu, then right-click a different highlight and confirm the menu immediately reappears on the new highlight.
+11. Confirm the mouse cursor is a hand (not I-beam) on the first page of the PDF, and that right-clicking highlights on page 1 opens the translation menu.
+12. Open a local PDF with the title-bar Open PDF button.
+13. Switch between Paper, AI, and Settings activities.
+14. Toggle the left AI chat from the activity bar and confirm the PDF pane expands/collapses cleanly.
+15. Drag the left split handle to a narrow width and confirm the chat becomes compact, auto-collapses below the threshold, and reopens if the still-held pointer is dragged back right.
+16. Drag both vertical split handles and confirm the left chat, center PDF, and right workbench widths adjust without overlap.
+17. Refresh/restart and confirm the adjusted workspace widths are retained.
+18. Press `Ctrl/Cmd + +` or `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, and `Ctrl/Cmd + 0`; confirm the whole app zooms and reset works.
+19. Hold `Ctrl/Cmd` and scroll the mouse wheel inside the PDF pane; confirm only the PDF view zooms, the header percentage updates, and existing highlights stay aligned with the selected text or region.
+20. Restart the app and confirm the last non-reset global zoom factor is retained.
+21. Configure one AI provider and send a short prompt from the left AI chat.
+22. Open the AI activity in the right workbench and confirm the AI Workbench renders a preview workspace.
+23. Confirm the right workbench has a visible scrollbar when content exceeds the available height.
+24. Use the compact block navigator and confirm it scrolls to Overview, Visual, Formula, Experiment, and Insight blocks.
+25. Confirm selecting PDF text only updates highlights/local preview and does not automatically send VisualLab S/B generation requests.
+26. In the right AI Workbench, click `Generate` and confirm it requests the configured AI provider and renders a generated `WorkspaceSpec` or a clear error fallback.
+27. In the Visual module, click `生成可视化` and confirm S mode becomes active when generation completes.
+28. In S mode, confirm multiple facet tabs appear (3-4 tabs with Chinese titles like "整体架构", "数据流"). Click each tab and confirm each shows a different focused SVG diagram.
+29. In S mode, hold `Ctrl` and scroll the mouse wheel over the SVG area; confirm the diagram zooms in/out (0.3x–3x range). Double-click the SVG to reset to 100%. Confirm the toolbar shows the current zoom percentage and a 1:1 reset button.
+30. Switch to B mode, move the sliders, and confirm the principle canvas, animation/highlighted blocks, live metrics, and step explanation update without leaving the sandbox.
+31. Switch to A mode, use playback controls to advance steps, then move each slider and confirm the upper SVG visibly changes: K/V cache blocks, token-wise interleaving blocks, block transfer blocks, GPU lanes, metric cards, and packet speed should update.
+32. In Visual A mode, confirm richer declarative elements can render in the preview or generated scene: matrix cells, layer stacks, formulas, bars, annotations, brackets, axes, or arrows should appear when present in `visualElements`.
+33. In the Formula module, confirm expression, variables, and derivation steps fit and scroll if needed.
+34. In the Experiment module, move sliders and confirm metrics plus the teaching curve update locally.
+35. In the Insight module, confirm key points, assumptions, limitations, and next questions are visible.
+36. Click an Overview suggested action and confirm the page scrolls to the target block.
+37. Ask the AI chat to translate or explain the selected context.
+38. Confirm streaming output appears as Markdown.
+39. Check DevTools and the Electron `userData/logs/papersuper-YYYY-MM-DD.log` file for renderer/main log lines when diagnosing generation failures.
+40. Run `npm run build`.
 
 ## AI Configuration
 
@@ -117,6 +120,30 @@ Check:
 - The Settings activity has a valid provider, API base, key, model, and token cap.
 - The highlight was created as an `AI Context` text highlight.
 - The PDF text extraction may still be running immediately after opening a large file; translation still works, but with less paper context until extraction finishes.
+
+### Translation popup cannot be dragged
+
+Check:
+
+- The drag handle is the `.translationPopupHeader` element; `onMouseDown` starts the drag.
+- Regenerate and close buttons have `onMouseDown={(e) => e.stopPropagation()}` so they do not trigger drag.
+- `cursor: grab` is set on `.translationPopupHeader` and `cursor: grabbing` on `.translationPopup.dragging .translationPopupHeader`.
+
+### Right-click translation menu does not appear on subsequent right-clicks
+
+Check:
+
+- The highlight action menu uses `pointer-events: none` on the container and `pointer-events: auto` on the translate button, so right-clicks pass through to the highlight underneath.
+- The translation popup's `onContextMenu` calls `setTranslationPopup(null)` without `stopPropagation`, closing the popup and allowing the next right-click to reach the highlight.
+- If the menu still does not appear, check that the highlight layer is on top of the text layer (see "First page shows I-beam cursor instead of hand" below).
+
+### First page shows I-beam cursor instead of hand
+
+Check:
+
+- The highlight layer `z-index` must use `!important` in `PdfHighlighter.module.css` to beat the PDF.js rule `.textLayer > :not(.markedContent) { z-index: 1 }` at specificity (0,2,0).
+- `onTextLayerRendered` in `PdfHighlighter.tsx` re-appends the highlight layer div after text spans to fix a DOM order race condition on page 1.
+- If the cursor is still wrong, check that the highlight layer DOM node is the last child of `textLayer.div`.
 
 ### PDF does not load
 
