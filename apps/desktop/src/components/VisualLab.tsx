@@ -461,6 +461,8 @@ const SVG_ALLOWED_ELEMENTS = new Set([
   "feMerge",
   "feMergeNode",
   "feDropShadow",
+  "feOffset",
+  "feBlend",
   "feColorMatrix",
   "feFlood",
   "feComposite",
@@ -609,8 +611,7 @@ const preprocessSvgForXml = (svg: string): string => {
   return result;
 };
 
-const SVG_EVENT_ATTR_RE =
-  /^on[a-z]|^xmlns:xlink$|^data-|^aria-|^tabindex|^focusable/i;
+const SVG_EVENT_ATTR_RE = /^on[a-z]|^tabindex|^focusable/i;
 
 const sanitizeSvg = (raw: string): string | null => {
   if (!raw || raw.length > SVG_MAX_LENGTH) {

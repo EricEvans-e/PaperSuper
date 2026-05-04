@@ -64,6 +64,8 @@ Last updated: 2026-05-04
 - First page highlight layer no longer sits behind text spans: CSS `z-index: 3 !important` beats the PDF.js specificity override, and `onTextLayerRendered` re-appends the highlight layer to ensure correct DOM order regardless of rendering race conditions.
 - B-mode prompt now treats the selected passage as the PRIMARY source and the VisualSpec as reference-only, matching S-mode's approach. Spec fields reduced from 12 to 8 (removed semantic, parameters, steps, simulation) to prevent stale spec content from overriding the current PDF selection.
 - S mode SVG prompt requires a light background `<rect>` as the first SVG element, explicit `fill` on all `<text>`, and light-text-on-dark-region guidance to prevent unreadable diagrams. CSS container `.visualSvgDiagram` uses light `#f8f9fa` background and light toolbar styling. Removed aggressive `svg text { fill: #1a1a2e }` override that broke intentional light text on dark fills.
+- SVG sanitizer `SVG_ALLOWED_ELEMENTS` now includes `feOffset` and `feBlend`, fixing broken filter chains where shadow/blur effects silently lost offset and blend steps.
+- SVG sanitizer `SVG_EVENT_ATTR_RE` no longer matches `data-*` or `aria-*` prefixes. Previously the regex short-circuited the `startsWith` guard in the walk function, causing all `data-*`/`aria-*` attributes to be removed even though they were intended to be preserved.
 
 ## Known Gaps
 
