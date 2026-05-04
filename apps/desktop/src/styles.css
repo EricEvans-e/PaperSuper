@@ -1947,7 +1947,7 @@ select:disabled {
 }
 
 .visualSvgDiagram svg {
-  width: 100%;
+  max-width: 100%;
   height: auto;
   max-height: none;
 }

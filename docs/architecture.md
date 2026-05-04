@@ -58,7 +58,7 @@ Renderer React UI
   - Renders the Visual module inside the right AI Workbench.
   - Provides S/B/A modes. S mode is the preferred generated view for paper-style SVG principle/structure diagrams.
   - S mode uses a two-phase multi-facet generation: Phase 1 asks AI for 3-4 facet definitions `[{title, focus}]`, Phase 2 generates each facet's SVG in parallel with progressive loading.
-  - S mode renders facets as switchable tabs with Ctrl+wheel zoom (0.3x–3x), double-click reset, and expand/collapse toggle. The SVG container uses a light `#f8f9fa` background with light toolbar styling; the prompt requires an explicit background `<rect>` and dark text `fill` attributes for readability.
+  - S mode renders facets as switchable tabs with Ctrl+wheel zoom (0.3x–3x), double-click reset, and expand/collapse toggle. The SVG container uses a light `#f8f9fa` background with light toolbar styling; the prompt requires an explicit background `<rect>` and dark text `fill` attributes for readability. The prompt is kept concise — readability constraints only, no specific colors or sizes. SVG CSS uses `max-width: 100%` so diagrams keep their natural viewBox aspect ratio. The sanitizer supports animation elements, advanced filter primitives, and a broad set of SVG attributes.
   - B mode renders a self-contained HTML/JS teaching lesson inside a sandboxed iframe.
   - Generates B-mode code through a manual raw-HTML AI call after structured `VisualSpec` JSON is available, avoiding large HTML/CSS/JS strings inside JSON.
   - Generates a local B-mode fallback lesson from safe `VisualSpec` data when raw AI HTML is missing, unsafe, or too incomplete to teach the selected mechanism.

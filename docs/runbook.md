@@ -187,7 +187,8 @@ Check:
 - `buildFacetSvgPrompt` should focus each facet on a distinct aspect (architecture, data flow, performance, etc.).
 - `extractSvgDiagram` should accept a raw `<svg>` or fenced ```svg block.
 - `sanitizeSvg` should reject unsafe or oversized SVG but keep valid diagrams. It strips scripts, event handlers, `foreignObject`, external hrefs, and unsafe URL references.
-- `SVG_ALLOWED_ELEMENTS` must include `feOffset` and `feBlend` for complete filter chains (shadows, blends). If filter effects are missing from rendered SVG, check logs for `removedElements` counts — a high count suggests filter primitives were stripped.
+- `SVG_ALLOWED_ELEMENTS` must include `feOffset` and `feBlend` for complete filter chains (shadows, blends), animation elements (`animate`, `animateTransform`, `set`), and advanced filter primitives (`feTurbulence`, `feDisplacementMap`, `feComponentTransfer`, lighting elements). If filter effects or animations are missing from rendered SVG, check logs for `removedElements` counts — a high count suggests primitives were stripped.
+- `SVG_ALLOWED_ATTRS` must include animation attributes (`attributeName`, `from`, `to`, `dur`, `repeatCount`, etc.), text-layout attributes (`writing-mode`, `white-space`), and filter/lighting attributes (`filterUnits`, `primitiveUnits`, `specularConstant`). If animation or lighting effects are missing, check that these attributes are in the whitelist.
 - `SVG_EVENT_ATTR_RE` must only match event handlers (`on*`), `tabindex`, and `focusable`. If `data-*` or `aria-*` attributes are stripped from rendered SVG, the regex may still contain `^data-` or `^aria-` branches that short-circuit the `startsWith` guard.
 - Individual facet failures should not block other facets. Check logs for `generateSvgFacets facet failed` to see which facet had issues.
 - If S mode fails entirely, the UI should show the SVG error state rather than silently falling back to a simple flowchart.

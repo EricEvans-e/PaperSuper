@@ -66,6 +66,10 @@ Last updated: 2026-05-04
 - S mode SVG prompt requires a light background `<rect>` as the first SVG element, explicit `fill` on all `<text>`, and light-text-on-dark-region guidance to prevent unreadable diagrams. CSS container `.visualSvgDiagram` uses light `#f8f9fa` background and light toolbar styling. Removed aggressive `svg text { fill: #1a1a2e }` override that broke intentional light text on dark fills.
 - SVG sanitizer `SVG_ALLOWED_ELEMENTS` now includes `feOffset` and `feBlend`, fixing broken filter chains where shadow/blur effects silently lost offset and blend steps.
 - SVG sanitizer `SVG_EVENT_ATTR_RE` no longer matches `data-*` or `aria-*` prefixes. Previously the regex short-circuited the `startsWith` guard in the walk function, causing all `data-*`/`aria-*` attributes to be removed even though they were intended to be preserved.
+- S mode SVG prompt simplified: removed specific color hex codes, specific viewBox sizes, specific marker IDs, specific minimum font sizes, and overly detailed design principles. Kept core readability constraints only (light background, dark text, adequate spacing).
+- SVG sanitizer element whitelist expanded: animation elements (`animate`, `animateTransform`, `set`) and advanced filter primitives (`feTurbulence`, `feDisplacementMap`, `feComponentTransfer`, `feFuncR/G/B/A`, lighting elements, `feImage`).
+- SVG sanitizer attribute whitelist expanded: animation attributes (`attributeName`, `from`, `to`, `dur`, `repeatCount`, etc.), text-layout attributes (`writing-mode`, `white-space`, etc.), color-management attributes (`color-interpolation`, `color-rendering`), filter/lighting attributes (`filterUnits`, `primitiveUnits`, `specularConstant`, etc.), and general attributes (`image-rendering`, `pointer-events`).
+- SVG CSS changed from `width: 100%` to `max-width: 100%` so SVGs use their natural viewBox aspect ratio instead of being stretched to container width.
 
 ## Known Gaps
 
