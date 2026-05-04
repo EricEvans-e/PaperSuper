@@ -1,6 +1,6 @@
 # PaperSuper Handoff
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Completed
 
@@ -62,6 +62,8 @@ Last updated: 2026-05-03
 - Selection debounce reduced from 500ms to 200ms so highlight overlays appear faster after text selection.
 - Native `::selection` color now matches the highlight overlay color (`#FFE28F`), eliminating the visible color flash during selection.
 - First page highlight layer no longer sits behind text spans: CSS `z-index: 3 !important` beats the PDF.js specificity override, and `onTextLayerRendered` re-appends the highlight layer to ensure correct DOM order regardless of rendering race conditions.
+- B-mode prompt now treats the selected passage as the PRIMARY source and the VisualSpec as reference-only, matching S-mode's approach. Spec fields reduced from 12 to 8 (removed semantic, parameters, steps, simulation) to prevent stale spec content from overriding the current PDF selection.
+- S mode SVG prompt requires a light background `<rect>` as the first SVG element, explicit `fill` on all `<text>`, and light-text-on-dark-region guidance to prevent unreadable diagrams. CSS container `.visualSvgDiagram` uses light `#f8f9fa` background and light toolbar styling. Removed aggressive `svg text { fill: #1a1a2e }` override that broke intentional light text on dark fills.
 
 ## Known Gaps
 
@@ -86,4 +88,4 @@ Last updated: 2026-05-03
 
 ## Verification Snapshot
 
-`npm run build` passed on 2026-05-03 after translation popup drag, right-click pass-through, selection debounce/color fixes, first-page z-index fix, and documentation sync.
+`npm run build` passed on 2026-05-03 after translation popup drag, right-click pass-through, selection debounce/color fixes, first-page z-index fix, B-mode context priority fix, and documentation sync.

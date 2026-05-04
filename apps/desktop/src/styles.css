@@ -1935,8 +1935,8 @@ select:disabled {
   min-height: 390px;
   max-height: 540px;
   padding: 8px;
-  background: #0d0f13;
-  border: 1px solid #292d35;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
   border-radius: 7px;
   overflow: auto;
   position: relative;
@@ -1950,6 +1950,12 @@ select:disabled {
   width: 100%;
   height: auto;
   max-height: none;
+}
+
+.visualSvgDiagram svg [fill="black"],
+.visualSvgDiagram svg [fill="#000"],
+.visualSvgDiagram svg [fill="#000000"] {
+  fill: #1a1a2e;
 }
 
 .visualSvgDiagram.expanded svg {
@@ -1973,18 +1979,18 @@ select:disabled {
   justify-content: center;
   height: 24px;
   padding: 0 6px;
-  border: 1px solid #292d35;
+  border: 1px solid #d1d5db;
   border-radius: 4px;
-  background: rgba(22, 26, 34, 0.85);
-  color: #9aa0aa;
+  background: rgba(255, 255, 255, 0.9);
+  color: #4b5563;
   font-size: 11px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 
 .visualSvgToolbar button:hover {
-  background: #1c2030;
-  color: #e5e7eb;
+  background: #e5e7eb;
+  color: #1f2937;
 }
 
 .visualSvgZoomLabel {

@@ -1,6 +1,6 @@
 # PaperSuper Architecture
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Overview
 
@@ -58,7 +58,7 @@ Renderer React UI
   - Renders the Visual module inside the right AI Workbench.
   - Provides S/B/A modes. S mode is the preferred generated view for paper-style SVG principle/structure diagrams.
   - S mode uses a two-phase multi-facet generation: Phase 1 asks AI for 3-4 facet definitions `[{title, focus}]`, Phase 2 generates each facet's SVG in parallel with progressive loading.
-  - S mode renders facets as switchable tabs with Ctrl+wheel zoom (0.3x–3x), double-click reset, and expand/collapse toggle.
+  - S mode renders facets as switchable tabs with Ctrl+wheel zoom (0.3x–3x), double-click reset, and expand/collapse toggle. The SVG container uses a light `#f8f9fa` background with light toolbar styling; the prompt requires an explicit background `<rect>` and dark text `fill` attributes for readability.
   - B mode renders a self-contained HTML/JS teaching lesson inside a sandboxed iframe.
   - Generates B-mode code through a manual raw-HTML AI call after structured `VisualSpec` JSON is available, avoiding large HTML/CSS/JS strings inside JSON.
   - Generates a local B-mode fallback lesson from safe `VisualSpec` data when raw AI HTML is missing, unsafe, or too incomplete to teach the selected mechanism.
@@ -150,7 +150,7 @@ Renderer React UI
 19. Each facet's SVG is sanitized by `sanitizeSvg` which removes scripts, event handlers, `foreignObject`, external links, and overlong payloads before rendering.
 20. After manual visual generation succeeds, VisualLab switches to S mode by default so the first generated result is a principle diagram rather than a generic flow diagram.
 21. S mode SVG supports Ctrl+wheel zoom (0.3x–3x), double-click reset, and an expand/collapse toolbar.
-22. B mode asks for raw self-contained HTML/SVG/JS code, not JSON.
+22. B mode asks for raw self-contained HTML/SVG/JS code, not JSON. The B-mode prompt treats the selected passage as the PRIMARY source and the VisualSpec as reference-only, matching S-mode's approach so stale spec content does not override the current PDF selection.
 23. `extractHtmlFragment` accepts raw HTML or a single fenced ```html block, strips document wrappers, and passes the fragment to `normalizeHtmlDemo`.
 24. If the raw HTML passes the unsafe/incomplete-demo check, B mode renders it in the iframe sandbox with CSP.
 25. If raw HTML is missing, unsafe, or too incomplete to teach the mechanism, B mode generates a local self-contained teaching lesson from the structured `VisualSpec`.

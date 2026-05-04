@@ -1,6 +1,6 @@
 # PaperSuper Runbook
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Commands
 
@@ -198,6 +198,15 @@ Check:
 - The zoom range is 0.3x–3x, applied via CSS `transform: scale(zoom)`.
 - Double-click should reset zoom to 1.0.
 - The toolbar should show the current zoom percentage and a 1:1 reset button.
+
+### SVG diagram text is unreadable or dark background
+
+Check:
+
+- The CSS container `.visualSvgDiagram` uses `background: #f8f9fa` (light gray). If the diagram area appears dark, check that the styles are not overridden.
+- The SVG prompt requires a background `<rect>` as the first element. If the AI omits it, the light container background still shows through.
+- The CSS only overrides `fill="black"` / `#000` / `#000000` to `#1a1a2e`. It does NOT force all `text` elements to dark — this preserves intentional light text on dark region fills.
+- If text is still unreadable, the AI may have used very light text colors on a light background. Regenerate with emphasis on dark text colors in the prompt.
 
 ### Visual module sliders do not change the scene
 
